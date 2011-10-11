@@ -3,7 +3,7 @@ menu-position: 1
 ---
 
 In its current implementation the platforms supported are linux
-(should work in almost any recent distribution) and windows (XP/Vists/7)
+(should work in almost any recent distribution) and windows (XP/Vista/7)
 
 The limited tests cases I've made, as they cover my real needs, are:
 

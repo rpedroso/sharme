@@ -31,4 +31,4 @@ Well, it's the usual, it's more fun to develop and use my own.
 ***
 
 > if you see any inconsistences, any wrong phrase or word in this site, please drop me a
-note in the [mailing](http://groups.google.com). The same is valid for enhancements.
+note in the [mailing](http://groups.google.com/group/sharme). The same is valid for enhancements.
