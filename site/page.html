@@ -1,0 +1,58 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset={{ __encoding__ }}" />
+    <title>sharme - {{ page["title"] }}</title>
+    <meta name="description" content="{{ page.get("description", "remote desktop") }}" />
+    <meta name="keywords" content="{{ page.get("keywords", "sharme,remote,share,desktop") }}" />
+    <link rel="stylesheet" type="text/css" href="poole.css" />
+</head>
+<body>
+    <div id="box">
+    <!--div id="header">
+         <h1>a poole site</h1>
+         <h2>{{ page["title"] }}</h2>
+    </div-->
+    <div id="menu">
+    <!--%
+        mpages = [p for p in pages if "menu-position" in p]
+        mpages.sort(key=lambda p: int(p["menu-position"]))
+        entry = '<span class="%s"><a href="%s">%s</a></span>'
+        for p in mpages:
+            style = p["title"] == page["title"] and "current" or ""
+            print(entry % (style, p["url"], p["title"]))
+    %-->
+    </div>
+    <!--%
+        import sys
+        mpages = []
+        for p in pages:
+            if "parent-id" in p and p["parent-id"] == page['title'] or 'submenu-position' in page:
+                if 'submenu-position' in p:
+                    mpages.append(p)
+
+        mpages.sort(key=lambda p: int(p["submenu-position"]))
+        entry = '<span class="%s"><a href="%s">%s</a></span>'
+        if mpages:
+            print('<div id="submenu">')
+        for p in mpages:
+            style = p["title"] == page["title"] and "current" or ""
+            print(entry % (style, p["url"], p["title"]))
+        if mpages:
+            print('</div>')
+    %-->
+    <div id="content">
+    <h1>sharme - {{ page["title"] }}</h1>
+    {{ __content__ }}
+    </div>
+    </div>
+    <div id="footer">
+        <p><a href="http://www.anybrowser.org/campaign/"><img src="anyb14.png" width="100" height="33" alt="Viewable With Any Browser" /></a></p>
+        Built with <a href="http://bitbucket.org/obensonne/poole">Poole</a>
+        &middot;
+        Licensed as <a href="http://creativecommons.org/licenses/by-sa/3.0">CC-SA</a>
+        &middot;
+        <a href="http://validator.w3.org/check?uri=referer">Validate me</a>
+    </div>
+</body>
+</html>

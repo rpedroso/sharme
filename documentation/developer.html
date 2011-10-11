@@ -1,0 +1,77 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>sharme - developer</title>
+    <meta name="description" content="remote desktop" />
+    <meta name="keywords" content="sharme,remote,share,desktop" />
+    <link rel="stylesheet" type="text/css" href="/poole.css" />
+</head>
+<body>
+    <div id="box">
+    <!--div id="header">
+         <h1>a poole site</h1>
+         <h2>developer</h2>
+    </div-->
+    <div id="menu">
+    <span class=""><a href="/index.html">about</a></span>
+<span class=""><a href="/status.html">status</a></span>
+<span class=""><a href="/documentation/index.html">documentation</a></span>
+<span class=""><a href="/download.html">download</a></span>
+<span class=""><a href="/mailing.html">mailing list</a></span>
+    </div>
+    <div id="submenu">
+<span class=""><a href="/documentation/user.html">user</a></span>
+<span class="current"><a href="/documentation/developer.html">developer</a></span>
+<span class=""><a href="/documentation/build.html">build</a></span>
+</div>
+    <div id="content">
+    <h1>sharme - developer</h1>
+    <p>sharme in its current form has a simple codebase.
+I tried to go with <a href="http://en.wikipedia.org/wiki/Spaghetti_code">ravioli code</a>, and overall I think I have
+achieve that.
+Some parts, however, has some <a href="http://en.wikipedia.org/wiki/Spaghetti_code">spaghetti code</a>, especially
+the src/viewer.cpp</p>
+<h2>The way it works is:</h2>
+<ol>
+<li>Take a desktop screenshot in rgba</li>
+<li>If the screen size is not multiple of 16
+   (any or both width, height) do a resize
+   to make it multiple of 16</li>
+<li>convert the screenshot image data from
+   rgb to yuv420p and at the same time strip
+   the alpha channel.</li>
+<li>Feed the video codec. The codec used is
+   the smoke codec from Gstreamer. Gstreamer is
+   not needed, I just shameless stole it from
+   Gstreamer.</li>
+<li>Then just send the encoded data to the network.
+   Before sent it an encryption is done with arc4</li>
+</ol>
+<h2>The way it is organized:</h2>
+<p>lib/* - where the several routines are implemented
+        generally a specific task is in it's own .c
+        file, for example conversion from rgb to yuv
+        and vice versa are in the colorspace.c
+include/* - the headers of the lib/*</p>
+<p>src/viewer.cpp - the code that runs in the supporter
+                 machine</p>
+<p>src/client.cpp - the code that runs in the machine
+                 that it's sharing its screen.</p>
+<p>src/sharme.cpp - the main where all starts running.</p>
+<hr />
+<blockquote>
+<p>Source code is hosted on github <a href="https://github.com/rpedroso/sharme">https://github.com/rpedroso/sharme</a> so go fork it.</p>
+</blockquote>
+    </div>
+    </div>
+    <div id="footer">
+        <p><a href="http://www.anybrowser.org/campaign/"><img src="/anyb14.png" width="100" height="33" alt="Viewable With Any Browser" /></a></p>
+        Built with <a href="http://bitbucket.org/obensonne/poole">Poole</a>
+        &middot;
+        Licensed as <a href="http://creativecommons.org/licenses/by-sa/3.0">CC-SA</a>
+        &middot;
+        <a href="http://validator.w3.org/check?uri=referer">Validate me</a>
+    </div>
+</body>
+</html>
