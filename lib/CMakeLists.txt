@@ -1,0 +1,27 @@
+add_library(resize resize.c)
+add_library(debug_ debug.c)
+add_library(colorspace colorspace.c)
+add_library(smoke smoke/smokecodec.c)
+add_library(socket socket.c)
+add_library(screenshot screenshot.c)
+add_library(keyb keyb.c)
+add_library(mouse mouse.c)
+add_library(arc4 arc4.c)
+
+if(WINDOWS)
+  target_link_libraries (socket wsock32)
+  target_link_libraries (socket ws2_32)
+endif(WINDOWS)
+
+if(LINUX)
+  find_package(X11 REQUIRED)
+  include_directories(${X11_INCLUDE_DIRS})
+  set(LIBS ${LIBS} ${X11_LIBRARIES} ${X11_XTest_LIB})
+  target_link_libraries(mouse ${LIBS})
+endif(LINUX)
+
+find_package(JPEG REQUIRED)
+#include_directories(${JPEG_INCLUDE_DIRS})
+#set(LIBS ${LIBS} ${JPEG_LIBRARIES})
+
+target_link_libraries (smoke jpeg)

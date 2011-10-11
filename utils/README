@@ -1,0 +1,27 @@
+makegui
+-------
+
+Small program to set/unset the gui flag in Win32 executables.
+
+In other words a small utility to avoid or not the command prompt window
+appear when running an executable.
+
+I get it from SWFTools source tree.
+
+
+Runnig it
+---------
+
+If you have TinyC compiler you can run it as it would be a shell script
+
+$ ./makegui.c
+
+
+Compile
+-------
+
+If you want to compile, just remove the first line (the called shebang)
+and then just do:
+
+$ make
+

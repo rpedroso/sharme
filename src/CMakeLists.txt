@@ -1,0 +1,38 @@
+# The version number.
+set (client_VERSION_MAJOR 1)
+set (client_VERSION_MINOR 0)
+ 
+set (FLTK_SKIP_IMAGES true)
+set (FLTK_SKIP_OPENGL true)
+set (FLTK_SKIP_FORMS true)
+
+find_package(FLTK REQUIRED)
+find_package (Threads REQUIRED)
+
+add_library(client client.cpp)
+target_link_libraries (client resize)
+target_link_libraries (client debug_)
+target_link_libraries (client colorspace)
+target_link_libraries (client smoke)
+target_link_libraries (client socket)
+target_link_libraries (client screenshot)
+target_link_libraries (client mouse)
+target_link_libraries (client keyb)
+target_link_libraries (client arc4)
+target_link_libraries (client ${FLTK_LIBRARIES})
+target_link_libraries (client ${CMAKE_THREAD_LIBS_INIT})
+
+add_library(viewer viewer.cpp)
+target_link_libraries (viewer resize)
+target_link_libraries (viewer debug_)
+target_link_libraries (viewer colorspace)
+target_link_libraries (viewer smoke)
+target_link_libraries (viewer socket)
+target_link_libraries (viewer arc4)
+#target_link_libraries (viewer ${FLTK_LIBRARIES})
+
+add_executable (sharme sharme.cpp)
+target_link_libraries (sharme debug_)
+target_link_libraries (sharme client)
+target_link_libraries (sharme viewer)
+#target_link_libraries (sharme ${FLTK_LIBRARIES})
