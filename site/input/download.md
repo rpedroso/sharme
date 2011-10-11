@@ -11,11 +11,6 @@ print(os.path.getsize("input/download/sharme.exe")) / 1024
 import os
 print(os.path.getsize("input/download/sharme_upx.exe")) / 1024
 %} KB)
-* [source tarball](/sharme/download/sharme-0.1.tar.gz)
-({%
-import os
-print(os.path.getsize("input/download/sharme_upx.exe")) / 1024
-%} KB)
 * [source repo](https://github.com/rpedroso/sharme)
 
 ***
