@@ -7,7 +7,7 @@ First, there is no need to install it, it will simply run.
 
 
 Supose that you want to support the user Bob.
-Know both start the app, and you will have to
+Both ends will start the app. You will have to
 click in "Remote Screen" button and pass your
 IP to Bob. Bob will enter your IP and than
 click on "Sharing".
