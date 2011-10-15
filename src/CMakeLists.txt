@@ -5,7 +5,7 @@ set (client_VERSION_MINOR 0)
 set (FLTK_SKIP_IMAGES true)
 set (FLTK_SKIP_OPENGL true)
 set (FLTK_SKIP_FORMS true)
-
+set (FLTK_SKIP_FLUID true)
 find_package(FLTK REQUIRED)
 find_package (Threads REQUIRED)
 
