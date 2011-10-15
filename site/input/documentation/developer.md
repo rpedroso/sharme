@@ -32,8 +32,8 @@ The way it works is:
 The way it is organized:
 ------------------------
 
-lib/\* - where the several routines are implemented
-        generally a specific task is in it's own .c
+lib/\* - where several routines are implemented.
+        Generally a specific task is in its own .c
         file, for example conversion from rgb to yuv
         and vice versa are in the colorspace.c
 include/\* - the headers of the lib/\*
