@@ -1,5 +1,16 @@
 #include <stdio.h>
+//#include <arpa/inet.h>
 #include "socket.h"
+
+// get sockaddr, IPv4 or IPv6:
+static void *get_in_addr(struct sockaddr *sa)
+{
+    if (sa->sa_family == AF_INET)
+    {
+        return &(((struct sockaddr_in*)sa)->sin_addr);
+    }
+    return &(((struct sockaddr_in6*)sa)->sin6_addr);
+}
 
 
 int socket_close(socket_t *self)
@@ -15,7 +26,8 @@ int socket_close(socket_t *self)
 
 int socket_del(socket_t *self)
 {
-    free(self);
+    if (self) free(self);
+    self = NULL;
 }
 
 int socket_setsockopt(socket_t *self, int level, int optname, const void *optval, socklen_t optlen)
@@ -80,10 +92,23 @@ socket_t* socket_accept0(socket_t *self)
 socket_t* socket_accept(socket_t *self, struct sockaddr *addr, socklen_t *addrlen)
 {
     //int new_fd = accept(self->fd, (struct sockaddr *)addr, addrlen);
-    int new_fd = accept(self->fd, NULL, NULL);
+    char s[INET_ADDRSTRLEN];
+
+    int new_fd = accept(self->fd, addr, addrlen);
+    if (new_fd < 0)
+        return NULL;
 
     socket_t *new_self = socket_init(self->family, self->type, self->proto);
     new_self->fd = new_fd;
+
+/*
+    inet_ntoa(((struct sockaddr_storage*)addr)->ss_family,
+              get_in_addr(addr),
+              s, sizeof s);
+*/
+    printf("%s\n", inet_ntoa(((struct sockaddr_in*)addr)->sin_addr));
+
+
     return new_self;
 }
 
@@ -104,6 +129,7 @@ int socket_sendall(socket_t *self, const void *buf, int *len, int flags)
     int bytesleft = *len; // how many we have left to send
     int n;
 
+    //printf("to send: %d\n", *len);
     while(total < *len) {
         n = send(self->fd, ((const char*)buf)+total, bytesleft, flags);
         if (n == -1) { break; }
@@ -112,10 +138,15 @@ int socket_sendall(socket_t *self, const void *buf, int *len, int flags)
     }
 
     *len = total; // return number actually sent here
+    //printf("sent: %d\n", *len);
 
     return n==-1?-1:0; // return -1 on failure, 0 on success
 }
 
+int socket_shutdown(socket_t *self, int how)
+{
+    return shutdown(self->fd, how);
+}
 static socket_t* socket_init(int family, int type, int proto)
 {
 #ifdef MSWINDOWS

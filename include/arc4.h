@@ -1,49 +1,18 @@
-/*
- * ARC4 implementation
- *      A Stream Cipher Encryption Algorithm "Arcfour"
- *      <draft-kaukonen-cipher-arcfour-03.txt>
- */
-
-/*        This code illustrates a sample implementation
- *                 of the Arcfour algorithm
- *         Copyright (c) April 29, 1997 Kalle Kaukonen.
- *                    All Rights Reserved.
- *
- * Redistribution and use in source and binary forms, with or
- * without modification, are permitted provided that this copyright
- * notice and disclaimer are retained.
- *
- * THIS SOFTWARE IS PROVIDED BY KALLE KAUKONEN AND CONTRIBUTORS ``AS
- * IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL KALLE
- * KAUKONEN OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
-
 #ifndef _CRYPTO_ARC4_H_
 #define _CRYPTO_ARC4_H_
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
-struct arc4_ctx {
-        unsigned int    x;
-        unsigned int    y;
-        unsigned int    state[256];
-        /* was unsigned char, changed to int for performance -- onoe */
-};
+typedef struct rc4_key
+{
+     unsigned char state[256];
+     unsigned char x;
+     unsigned char y;
+} rc4_key;
 
-int arc4_ctxlen(void);
-void arc4_setkey(void *, const unsigned char *, unsigned int);
-void arc4_encrypt(void *, unsigned char *, const unsigned char *, int);
-void arc4_decrypt(void *, unsigned char *, const unsigned char *, int);
+void prepare_key(unsigned char *key_data_ptr, int key_data_len, rc4_key *key);
+void rc4(unsigned char *buffer_ptr, int buffer_len, rc4_key *key);
 
 #ifdef __cplusplus
 }

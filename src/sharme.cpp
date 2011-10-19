@@ -1,108 +1,177 @@
-#include <FL/Fl.H>
-#include <FL/Fl_Window.H>
-#include <FL/Fl_Input.H>
-#include <FL/Fl_Button.H>
+#include <stdio.h>
 
 #include <stdlib.h>
 #include <string.h>
 
-//#include "debug.h"
 #include "arc4.h"
+
+#include "sharme_config.h"
 #include "client.h"
 #include "viewer.h"
+#include "sharme_ui.h"
+#include "enums.h"
 
-#define PROGNAME "Sharme"
+#include "common.h"
+
+#define PROGNAME "sharme"
 
 int msglevel = 1;
+SharmeUI *shui;
+static char *cmd_server = NULL;
+static int cmd_quality = 40;
+static char *cmd_keycode = NULL;
 
-const unsigned char *enc_key = (const unsigned char*) "alibaba";
-struct arc4_ctx arc4_ct;
+static int helpFlag = 0;
 
-typedef struct {
-    Fl_Window *win;
-    Fl_Input *inp;
-} objs;
-
-void viewer_cb(Fl_Widget *b,void *p)
+static void viewer(void)
 {
-    Fl_Window *w = (Fl_Window*)p;
-    w->hide();
-    Fl::wait();
-    viewer();
-    w->show();
+    sharme_viewer_start(shui);
 }
 
-void client_cb(Fl_Widget *b,void *p)
+static void client()
 {
-    char *ip;
-    objs *o = (objs*) p;
+    char *server;
 
-    Fl_Window *window = o->win;
-    Fl_Input *input = o->inp;
-
-    ip = strdup(input->value());
-    if (*ip)
+    server = strdup(shui->te_server->value());
+    if (*server)
     {
-        b->deactivate();
-        window->hide();
-        Fl::wait();
-        sharme_client(ip);
-        window->show();
-        b->activate();
+        sharme_client_start(shui, server);
     }
-    free(ip);
+    free(server);
+}
+
+void start_cb(Fl_Widget *,void *)
+{
+    sharme_setup_crypto_key(
+      (unsigned char*)shui->te_keycode->value());
+
+    //printf("enc_key: %s\n", enc_key);
+    if (shui->rb_manage->value())
+    {
+        viewer();
+    }
+    else
+    {
+        client();
+    }
+}
+
+void mode_cb(Fl_Widget *,void *)
+{
+    if (shui->rb_share->value())
+    {
+        shui->gr_props->activate();
+    }
+    else
+    {
+        shui->gr_props->deactivate();
+    }
 }
 
 void exit_cb(Fl_Widget *,void *)
 {
-    exit(0);
+    if (shui->state == SHARME_STARTED)
+    {
+        if (shui->rb_manage->value())
+        {
+            sharme_viewer_stop();
+        }
+        else
+        {
+            sharme_client_stop();
+        }
+    }
+    else
+    {
+        exit(0);
+    }
+}
+
+static int arg(int argc, char **argv, int &i)
+{
+    if (strcmp("-h", argv[i]) == 0 || strcmp("--help", argv[i]) == 0) {
+        helpFlag = 1;
+        i += 1;
+        return 1;
+    }
+    if (strcmp("-se", argv[i]) == 0 || strcmp("-server", argv[i]) == 0) {
+        if (i < argc-1 && argv[i+1] != 0) {
+            cmd_server = argv[i+1];
+            i += 2;
+            return 2;
+        }
+    }
+    if (strcmp("-q", argv[i]) == 0 || strcmp("-quality", argv[i]) == 0) {
+        if (i < argc-1 && argv[i+1] != 0) {
+            cmd_quality = atoi(argv[i+1]);
+            i += 2;
+            return 2;
+        }
+    }
+    if (strcmp("-key", argv[i]) == 0 || strcmp("-keycode", argv[i]) == 0) {
+        if (i < argc-1 && argv[i+1] != 0) {
+            cmd_keycode = argv[i+1];
+            i += 2;
+            return 2;
+        }
+    }
+    return 0;
 }
 
 int main(int argc, char *argv[])
 {
-    objs o;
+    int i = 1;
 
-    if (argv[1] && *argv[1])
+    if (Fl::args(argc, argv, i, arg) < argc)
+        Fl::fatal("error: unknown option: %s\n"
+        "usage: %s [options]\n"
+        " -h | --help : print extended help message\n"
+        " -se[rver] <ip> : share desktop with <ip>\n"
+        " -q[uality] <ip> : image quality\n"
+        " -key[code] <key> : key code\n"
+        " FLTK options\n",
+        argv[i], argv[0]);
+
+    if (helpFlag)
+        Fl::fatal("usage: %s [options]\n"
+        " -h | --help : print extended help message\n"
+        " -se[rver] <ip> : share desktop with <ip>\n"
+        " -q[uality] <ip> : image quality\n"
+        " -key[code] <key> : key code\n"
+        " FLTK options:\n"
+        "%s\n",
+        argv[0], Fl::help);
+
+    shui = new SharmeUI;
+
+    Fl::visual(FL_DOUBLE | FL_RGB);
+
+    shui->lb_header->label(SHARME_LABEL_HEADER);
+
+    if (!cmd_server)
     {
-        sharme_client(argv[1]);
-        exit(0);
+        shui->show(argc, argv);
+        shui->bt_start->callback(start_cb);
+        shui->bt_exit->callback(exit_cb);
+        shui->rb_manage->callback(mode_cb);
+        shui->rb_share->callback(mode_cb);
+        shui->sharme_window->callback(exit_cb);
+        shui->te_keycode->value(sharme_random());
+
+        mode_cb(NULL, NULL);
+    }
+    else
+    {
+        shui->rb_manage->value(0);
+        shui->rb_share->value(1);
+        shui->sl_quality->value(cmd_quality);
+        shui->te_server->value(cmd_server);
+        shui->te_keycode->value(cmd_keycode);
+
+        start_cb(NULL, NULL);
     }
 
-    Fl::args(argc, argv);
-    Fl::get_system_colors();
-    Fl::visual(FL_RGB);
-
-    Fl_Window window(320, 85);
-    window.label(PROGNAME);
-
-    int y = 10;
-    Fl_Input input(30, y, 300, 30, "IP:");
-    y += 35;
-    input.tooltip("");
-
-    o.win = &window;
-    o.inp = &input;
-
-    int x = 9;
-    Fl_Button b_ok(x, y, 110, 25, "&Share Screen");
-    x += 120;
-    b_ok.callback(client_cb, (void*)&o);
-    b_ok.tooltip("");
-
-    Fl_Button b_server(x, y, 110, 25, "&Remote Screen"); x+=120;
-    b_server.callback(viewer_cb, (void*)&window);
-    b_server.tooltip("");
-
-    Fl_Button *b = new Fl_Button(x, y, 110, 25, "&Cancel");
-    x += 120;
-    y += 25;
-    b->callback(exit_cb);
-    b->tooltip("");
-
-    window.size(380, y+10);
-    window.end();
-    window.show(argc, argv);
-
-    Fl::run();
+    Fl::lock();
+    return Fl::run();
 }
 

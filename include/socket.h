@@ -67,6 +67,7 @@ int socket_recv(struct _socket *self, void *buf, int len, int flags);
 int socket_send(struct _socket *self, const void *buf, int len, int flags);
 int socket_sendall(struct _socket *self, const void *buf, int *len, int flags);
 int socket_close(struct _socket *self);
+int socket_shutdown(struct _socket *self, int how);
 
 #ifdef __cplusplus
 }

@@ -1,24 +1,35 @@
-#include <pthread.h>
+//#include <stdio.h>
 #include <unistd.h>
 
+#include <FL/Fl.H>
+#include <FL/Fl_Window.H>
+
+#include "sharme_config.h"
+#include "sharme_ui.h"
 #include "screenshot.h"
 #include "socket.h"
 #include "resize.h"
 #include "keyb.h"
 #include "mouse.h"
 #include "colorspace.h"
-#include "arc4.h"
+#include "common.h"
 #include "debug.h"
 #include "smoke/smokecodec.h"
+#include "fl_thread.h"
 
 
-static int fast;
+static int fast = 0;
+static SharmeUI *g_parent = NULL;
 
-extern const unsigned char* enc_key;
-extern struct arc4_ctx arc4_ct;
+static socket_t *client_sock = NULL;
+static screenshot_t *ss = NULL;
 
+static SmokeCodecInfo *info = NULL;
+static unsigned char* raw_image = NULL;
+static unsigned char* yuv420p = NULL;
+static unsigned char* outdata = NULL;
 
-int make_div_by_16(int val)
+static int make_div_by_16(int val)
 {
     int m;
     if (!(m=val%16)) return val;
@@ -26,86 +37,55 @@ int make_div_by_16(int val)
     return val-m;
 }
 
-
-socket_t *sock;
-screenshot_t *ss;
-
-SmokeCodecInfo *info;
-static unsigned char* raw_image;
-static unsigned char* yuv420p;
-static unsigned char* outdata;
-
-static inline void sharme_screenshot(int width, int height, int new_w, int new_h, unsigned int *yuvsize)
+static inline void client_screenshot(int width, int height,
+                                     int new_w, int new_h)
 {
-    SmokeCodecFlags flags;
-
     screenshot_get_image(ss);
 
     if (width != new_w || height != new_h)
     {
-      resample_nearest(ss->data, width, height, 4, raw_image, new_w, new_h);
-      //resample(ss->data, width, height, 4, raw_image, new_w, new_h);
-      rgb2yuv420p(raw_image, yuv420p, new_w, new_h, 3);
+        resample_nearest(ss->data, width, height, 4, raw_image, new_w, new_h);
+        rgb2yuv420p(raw_image, yuv420p, new_w, new_h, 3);
     }
     else
     {
-        //memcpy(raw_image, ss->data, width*height*4);
-        raw_image = ss->data;
-        rgb2yuv420p(raw_image, yuv420p, new_w, new_h, 4);
+        rgb2yuv420p(ss->data, yuv420p, new_w, new_h, 4);
     }
-
-    flags = SMOKECODEC_MOTION_VECTORS;
-    smokecodec_encode(info, yuv420p, flags, outdata, yuvsize);
-
 }
 
-static inline int sharme_sendframe(int yuvsize)
+static inline int client_sendframe(int yuvsize)
 {
     int r;
-    int s = 4;
+    int yuvsize_enc;
 
-    int on = 0;
-    socket_setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &on, sizeof(on));
+    yuvsize_enc = yuvsize;
 
-    //arc4_setkey(&arc4_ct, enc_key, strlen(enc_key));
-    //arc4_encrypt(&arc4_ct, (char*)yuvsize, yuvsize, s);
-
-    r = socket_sendall(sock, (char*)&yuvsize, &s, 0);
+    sharme_tcp_delay(client_sock);
+    r = sharme_send(client_sock, (unsigned char*)&yuvsize_enc, 4);
     if (r < 0)
-    {
-        pmesg(0, (char*)"%s: %s\n", "erro", "conn close");
-        return(-1);
-    }
+        return r;
 
-    on = 1;
-    socket_setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &on, sizeof(on));
-
-    arc4_setkey(&arc4_ct, enc_key, strlen((char*)enc_key));
-    arc4_encrypt(&arc4_ct, outdata, outdata, yuvsize);
-
-    r = socket_sendall(sock, outdata, &yuvsize, 0);
+    sharme_tcp_nodelay(client_sock);
+    r = sharme_send(client_sock, outdata, yuvsize);
     if (r < 0)
-    {
-        pmesg(0, (char*)"%s: %s\n", "erro", "conn close");
-        return(-1);
-    }
+        return r;
+
     return 0;
 }
 
 
-void *sharme_recv_input(void *arg)
+static void *sharme_recv_input(void *arg)
 {
     int r;
     char action;
-    char pbuf[1]={0};
     int pos;
     int key;
     int x, y;
     mouse_init();
-    while(1)
+    while(true)
     {
-        r = socket_recv(sock, (char*)&action, 1, 0);
-        if (r <= 0) break;
+        r = sharme_recv(client_sock, (unsigned char*)&action, 1);
+        if (r < 0) break;
 
         switch (action)
         {
@@ -126,8 +106,8 @@ void *sharme_recv_input(void *arg)
             mouse_right_up();
             break;
         case 'c':
-            r = socket_recv(sock, (char*)&pos, 4, 0);
-            if (r <= 0) break;
+            r = sharme_recv(client_sock, (unsigned char*)&pos, 4);
+            if (r < 0) break;
             x = pos>>16;
             y = (pos<<16)>>16;
             mouse_move(x, y);
@@ -135,74 +115,106 @@ void *sharme_recv_input(void *arg)
         case 'k':
         case 'K':
             //key_flag = (action == 'K') ? KEYEVENTF_KEYUP: 0;
-            r = socket_recv(sock, (char*)&key, 4, 0);
-            if (r <= 0) break;
+            r = sharme_recv(client_sock, (unsigned char*)&key, 4);
+            if (r < 0) break;
 
             process_key(action, key);
             break;
         }
     }
+    pmesg(0, (char*)"client: cleanup keys\n");
+    cleanup_keys();
     pmesg(0, (char*)"client: exit thread\n");
 }
 
-int sharme_client(char *ip)
+void* sharme_client2(void *p)
 {
     int width;
     int height;
     int new_w;
     int new_h;
 
-    int min_quality = 30;
-    int max_quality = 90;
-    int threshold = 300;
+    Fl::lock();
+    int min_quality = g_parent->sl_quality->value(); //30;
+    int max_quality = g_parent->sl_quality->value(); //90;
+    Fl::unlock();
+    int threshold   = 300;
+
+    char *server = (char *) p;
+
+    int screen_size;
+
+    unsigned int yuvsize;
+    unsigned int yuvsize_sav;
 
     fast = 0;
 
-    pthread_t thread_ID;
-    void *exit_status;
+    client_sock = socket_new(PF_INET, SOCK_STREAM, 0);
 
-    sock = socket_new(PF_INET, SOCK_STREAM, 0);
-
-    int r = socket_connect(sock, ip, "8000");
+    int r = socket_connect(client_sock, server, SHARME_PORT);
     if (r < 0)
     {
-        pmesg(0, (char*)"%s: %s\n", "erro", "conn refused");
-        return(-1);
+        pmesg(0, (char*)"%s: %s\n", "error", "conn refused");
+        goto error;
     }
 
-    pthread_create(&thread_ID ,NULL, sharme_recv_input, NULL);
+    if (g_parent)
+        Fl::awake(connected_cb, g_parent);
 
     ss = screenshot_new();
     screenshot_get_screen_size(ss, 0, &width, &height);
     screenshot_init(ss, 0, 0, width, height);
 
+    /* advertise the other end about our screen size */
+    screen_size = (width<<16) | ((height<<16)>>16);
+    r = sharme_send(client_sock, (unsigned char*)&screen_size, 4);
+    if (r < 0)
+    {
+        pmesg(0, (char*)"error: advertising screen size");
+        goto error;
+    }
+
+
+    pmesg(1, (char*)"screen size: (%dx%d)\n", width, height);
+
     new_w = make_div_by_16(width);
     new_h = make_div_by_16(height);
 
-    int screen_size = (width<<16) | ((height<<16)>>16);
-    int s = sizeof(int);
-    r = socket_sendall(sock, (char*)&screen_size, &s, 0);
+    yuvsize = (new_w * new_h) + ((new_w * new_h) >> 1);
+    yuvsize_sav = yuvsize;
 
-    pmesg(1, (char*)"screen size: (%dx%d)\n", width, height);
-    pmesg(1, (char*)"rescaling to: (%dx%d)\n", new_w, new_h);
+    yuv420p = (unsigned char*) calloc(sizeof(unsigned char), yuvsize);
+    outdata = (unsigned char*) calloc(sizeof(unsigned char), yuvsize);
+    if (new_w != width || new_h != height)
+    {
+        pmesg(1, (char*)"resample to: (%dx%d)\n", new_w, new_h);
+        raw_image = (unsigned char*) calloc(sizeof(unsigned char), new_w*new_h*3);
+    }
 
     smokecodec_encode_new (&info, new_w, new_h, 12, 2);
     smokecodec_set_quality (info, min_quality, max_quality);
     smokecodec_set_threshold (info, threshold);
 
-    unsigned int yuvsize = (new_w * new_h) + ((new_w * new_h) >> 1);
-    unsigned int yuvsize_sav = yuvsize;
-
-    yuv420p = (unsigned char*) calloc(sizeof(unsigned char), yuvsize);
-    outdata = (unsigned char*) calloc(sizeof(unsigned char), yuvsize);
-    raw_image = (unsigned char*) calloc(sizeof(unsigned char), new_w*new_h*3);
+    Fl_Thread sharme_client_thread2;
+    fl_create_thread(sharme_client_thread2, sharme_recv_input, NULL);
 
     while(true)
     {
+        //Fl::lock();
+        //int min_quality = g_parent->sl_quality->value(); //30;
+        //int max_quality = g_parent->sl_quality->value(); //90;
+        //Fl::unlock();
+        //smokecodec_set_quality (info, min_quality, max_quality);
+
         yuvsize = yuvsize_sav;
 
-        sharme_screenshot(width, height, new_w, new_h, &yuvsize);
-        if (sharme_sendframe(yuvsize)<0) break;
+        client_screenshot(width, height, new_w, new_h);
+        smokecodec_encode(info, yuv420p, SMOKECODEC_MOTION_VECTORS, outdata, &yuvsize);
+        if ((r=client_sendframe(yuvsize)) < 0)
+        {
+            pmesg(1, (char*)"error: sendframe (errno: %d\n", r);
+            break;
+        }
 
         if (fast)
             usleep(100000);
@@ -210,18 +222,39 @@ int sharme_client(char *ip)
             usleep(200000);
     }
 
-    pthread_join(thread_ID, &exit_status);
+error:
+    if (g_parent)
+        Fl::awake(disconnected_cb, g_parent);
 
-    cleanup_keys();
+    if (ss) screenshot_dealloc(ss);
+    if (yuv420p) free(yuv420p);
+    if (outdata) free(outdata);
+    if (raw_image) free(raw_image);
 
-    screenshot_dealloc(ss);
-    free(yuv420p);
-    free(outdata);
-    free(raw_image);
+    socket_close(client_sock);
+    socket_del(client_sock);
 
-    socket_close(sock);
-    socket_del(sock);
+    if (info) smokecodec_info_free(info);
+    free(server);
+    pmesg(0, (char*)"sharme_client2: return\n");
+}
 
-    smokecodec_info_free(info);
-    return 0;
+void sharme_client_stop(void)
+{
+    if (client_sock)
+        socket_shutdown(client_sock, 2);
+}
+
+int sharme_client_start(void *parent, char *server)
+{
+    Fl_Thread sharme_client_thread;
+
+    g_parent = (SharmeUI*) parent;
+    connecting_cb(g_parent);
+
+    if (!g_parent->sharme_window->shown())
+        sharme_client2((void*)strdup(server));
+    else
+        fl_create_thread(sharme_client_thread,
+                         sharme_client2, (void*)strdup(server));
 }

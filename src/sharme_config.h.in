@@ -1,0 +1,6 @@
+// settings for sharme
+#define SHARME_VERSION_MAJOR @sharme_VERSION_MAJOR@
+#define SHARME_VERSION_MINOR @sharme_VERSION_MINOR@
+#define SHARME_PORT @sharme_PORT@
+
+#define SHARME_LABEL_HEADER @sharme_LABEL_HEADER@

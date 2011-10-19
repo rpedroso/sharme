@@ -1,5 +1,4 @@
-#include <stdio.h>
-#include <string.h>
+//#include <stdio.h>
 #include <unistd.h>
 
 #include <FL/Fl.H>
@@ -14,117 +13,103 @@
 #include "colorspace.h"
 #include "smoke/smokecodec.h"
 
-#include "arc4.h"
+#include "sharme_config.h"
+#include "common.h"
+#include "viewer.h"
+#include "sharme_ui.h"
+#include "fl_thread.h"
 
 
-#ifdef MSWINDOWS
-#include <windows.h>
-#include <process.h>
+static socket_t *conn = NULL;
+static socket_t *sock = NULL;
+static int g_width = 0;
+static int g_height = 0;
 
-
-typedef unsigned long Fl_Thread;
-static int fl_create_thread(Fl_Thread& t, void *(*f) (void *), void* p) {
-  return t = (Fl_Thread)_beginthread((void( __cdecl * )( void * ))f, 0, p);
-}
-
-#else
-
-#include <unistd.h>
-#include <pthread.h>
-
-typedef pthread_t Fl_Thread;
-static int fl_create_thread(Fl_Thread& t, void *(*f) (void *), void* p) {
-  return pthread_create((pthread_t*)&t, 0, f, p);
-}
-#endif
-
-extern const unsigned char* enc_key;
-extern struct arc4_ctx arc4_ct;
-
-socket_t *conn;
-int g_width, g_height;
-
+class Viewer;
+static Viewer *window = NULL;
 
 class Viewer : public Fl_Double_Window
 {
     int handle(int e)
     {
-        static int cnt=0;
+        static int cnt = 0;
         int pos;
         int key;
-        int s;
-        int on;
+        char cmd;
         float fw, fh;
+        pmesg(3, (char*)"Viewer::handle\n");
         pmesg(9, (char*)"EVENT: %s(%d)\n", fl_eventnames[e], e);
 
         switch (e)
         {
         case FL_PUSH:
-            on = 1; socket_setsockopt(conn, IPPROTO_TCP, TCP_NODELAY, &on, sizeof(on));
+            sharme_tcp_nodelay(conn);
             switch (Fl::event_button())
             {
                 case FL_LEFT_MOUSE:
-                    socket_send(conn, "L", 1, 0);
+                    cmd = 'L';
                     break;
                 case FL_MIDDLE_MOUSE:
-                    socket_send(conn, "M", 1, 0);
+                    cmd = 'M';
                     break;
                 case FL_RIGHT_MOUSE:
-                    socket_send(conn, "R", 1, 0);
+                    cmd = 'R';
                     break;
             }
+            sharme_send(conn, (unsigned char*)&cmd, 1);
             break;
         case FL_RELEASE:
-            on = 1; socket_setsockopt(conn, IPPROTO_TCP, TCP_NODELAY, &on, sizeof(on));
+            sharme_tcp_nodelay(conn);
             switch (Fl::event_button())
             {
                 case FL_LEFT_MOUSE:
-                    socket_send(conn, "l", 1, 0);
+                    cmd = 'l';
                     break;
                 case FL_MIDDLE_MOUSE:
-                    socket_send(conn, "m", 1, 0);
+                    cmd = 'm';
                     break;
                 case FL_RIGHT_MOUSE:
-                    socket_send(conn, "r", 1, 0);
+                    cmd = 'r';
                     break;
             }
+            sharme_send(conn, (unsigned char*)&cmd, 1);
             break;
         case FL_DRAG:
         case FL_MOVE:
+            /* attempt to minimize the number of
+               packages transmited */
             cnt++;
             if (!(cnt%2)) {
                 usleep(10000);
                 cnt=0;
                 return 1;
             }
-            on = 0; socket_setsockopt(conn, IPPROTO_TCP, TCP_NODELAY, &on, sizeof(on));
-            socket_send(conn, "c", 1, 0);
-            s=4;
+            sharme_tcp_delay(conn);
+            cmd = 'c';
+            sharme_send(conn, (unsigned char*)&cmd, 1);
             fw = float(g_width) / this->w();
             fh = float(g_height) / this->h();
-            //pmesg(9, (char*)"%f:%f   %d:%d   %d:%d\n", fw, fh, g_width, g_height, this->w(), this->h());
             pos = ((int)(Fl::event_x()*fw)<<16) | ((((int)(Fl::event_y()*fh))<<16)>>16);
-            on = 1; socket_setsockopt(conn, IPPROTO_TCP, TCP_NODELAY, &on, sizeof(on));
-            socket_sendall(conn, (char*)&pos, &s, 0);
+            sharme_tcp_nodelay(conn);
+            sharme_send(conn, (unsigned char*)&pos, 4);
             break;
         //case 19: // FL_WHEEL
         //    break;
         case FL_KEYDOWN:
-            on = 0; socket_setsockopt(conn, IPPROTO_TCP, TCP_NODELAY, &on, sizeof(on));
+            sharme_tcp_delay(conn);
             key = Fl::event_key();
-            pmesg(9, (char*)"key: %d\n", key);
-            socket_send(conn, "k", 1, 0);
-            s=4;
-            on = 1; socket_setsockopt(conn, IPPROTO_TCP, TCP_NODELAY, &on, sizeof(on));
-            socket_sendall(conn, (char*)&key, &s, 0);
+            cmd = 'k';
+            sharme_send(conn, (unsigned char*)&cmd, 1);
+            sharme_tcp_nodelay(conn);
+            sharme_send(conn, (unsigned char*)&key, 4);
             break;
         case FL_KEYUP:
-            on = 0; socket_setsockopt(conn, IPPROTO_TCP, TCP_NODELAY, &on, sizeof(on));
+            sharme_tcp_delay(conn);
             key = Fl::event_key();
-            socket_send(conn, "K", 1, 0);
-            s=4;
-            on = 1; socket_setsockopt(conn, IPPROTO_TCP, TCP_NODELAY, &on, sizeof(on));
-            socket_sendall(conn, (char*)&key, &s, 0);
+            cmd = 'K';
+            sharme_send(conn, (unsigned char*)&cmd, 1);
+            sharme_tcp_nodelay(conn);
+            sharme_send(conn, (unsigned char*)&key, 4);
             break;
         }
         return 1;
@@ -133,170 +118,349 @@ public:
     Viewer(int w,int h) : Fl_Double_Window(w,h) {}
 };
 
-void* receiver_func(void* p)
+/* messages to main thread */
+typedef struct draw_image_args
 {
-    char buf[4096];
-    char *pbuf;
-    bool first_time=true;
-    int r;
+    int width;
+    int height;
+    unsigned char *data;
+} draw_image_args_t;
 
-    usleep(1000000);
-
-    Viewer *win = (Viewer*) p;
-
-    SmokeCodecInfo *info;
-    smokecodec_decode_new (&info);
-
-    pmesg(1, (char*)"start...\n");
-    while(true)
-    {
-        int rest_len;
-        char rest[256];
-
-        int len;
-        pmesg(8, (char*)"receiving... %d bytes\n", 4);
-        r = socket_recv(conn, (char*)&len, 4, 0);
-        pmesg(8, (char*)"recv %d bytes\n", r);
-        if (r <= 0) break;
-        unsigned char *videodata = (unsigned char*) malloc(sizeof(unsigned char) * len);
-        unsigned char *pvideodata = videodata;
-        unsigned long tot=len;
-        r=0; int pos=0;
-
-        while(tot>0)
-        {
-            pmesg(8, (char*)"receiving... %d bytes\n", tot);
-            r = socket_recv(conn, pvideodata+pos, tot, 0);
-            pmesg(8, (char*)"recv %d bytes\n", r);
-            if (r <= 0) break;
-            tot -= r;
-            pos += r;
-        }
-        if (r <= 0)
-        {
-            free(videodata);
-            break;
-        }
-
-        arc4_setkey(&arc4_ct, enc_key, strlen((char*)enc_key));
-        arc4_decrypt(&arc4_ct, videodata, videodata, len);
-
-
-        unsigned int width;
-        unsigned int height;
-        SmokeCodecFlags flags;
-        unsigned int fps_num, fps_denom;
-        int ret = smokecodec_parse_header (info, videodata, len, &flags, &width, &height, &fps_num, &fps_denom);
-        pmesg(9, (char*)"parse_header... %d\n", ret);
-
-        if(first_time) {
-            first_time=false;
-            win->size( (width>Fl::w()?Fl::w():width)-40 , (height>Fl::h()?Fl::h():height)-40 );
-            win->position((Fl::w() - win->w())/2, (Fl::h() - win->h())/2);
-        }
-
-        pmesg(9, (char*)"decoding... (%d:%d)(%d:%d)(%d)\n", width, height, fps_num, fps_denom, flags);
-
-        static unsigned int last_width=0;
-        static unsigned int last_height=0;
-        static unsigned long outsize=0;
-        static unsigned char *out=0;
-        static unsigned char *rgbout=0;
-        static unsigned char *rgbout2=0;
-
-        //float factor = float(height)/width;
-        int new_w, new_h;
-        Fl::lock();
-        new_w = win->w();
-        new_h = win->h(); //(int)new_w*factor;
-        Fl::unlock();
-
-        if ((last_width != new_w) || last_height != new_h)
-        {
-            pmesg(9, (char*)"new_w: %d, new_h: %d\n", new_w, new_h);
-            pmesg(9, (char*)"last_width: %d, last_height: %d\n", last_width, last_height);
-            if (out !=NULL) free(out);
-            if (rgbout !=NULL) free(rgbout);
-            if (rgbout2 !=NULL) free(rgbout2);
-            outsize = width * height + width * height / 2;
-            out = (unsigned char*) malloc(sizeof(unsigned char) * outsize);
-            rgbout = (unsigned char*) malloc(sizeof(unsigned char) * width * height * 3);
-            rgbout2 = (unsigned char*) malloc(sizeof(unsigned char) * new_w * new_h * 3);
-        }
-
-        smokecodec_decode (info, (const unsigned char*) videodata, len, out);
-        pmesg(9, (char*)"yuv4202rgb %p\n", rgbout);
-        yuv420p2rgb(out, rgbout, width, height, 3);
-
-        pmesg(9, (char*)"resample\n");
-        resample(rgbout, width, height, 3, rgbout2, new_w, new_h);
-
-        pmesg(9, (char*)"draw\n");
-        Fl::lock();
-        fl_push_no_clip();
-        fl_draw_image((const unsigned char*)rgbout2, 0,0, new_w, new_h, 3, 0); //win->w(), win->h());
-        fl_pop_clip();
-        Fl::unlock();
-
-        free(videodata);
-
-        last_width = new_w;
-        last_height = new_h;
-        //usleep(125000);
-    }
-    pmesg(1, (char*)"exiting viewer thread\n");
+static void viewer_draw_image_cb(void *p)
+{
+    pmesg(3, (char*)"viewer_draw_image\n");
+    draw_image_args_t *di_arg = (draw_image_args_t*) p;
+    //Fl::lock();
+    window->make_current();
+    //fl_push_no_clip();
+    fl_draw_image((const unsigned char*)di_arg->data, 0,0,
+                  di_arg->width, di_arg->height, 3, 0);
+    //fl_pop_clip();
+    //Fl::unlock();
 }
 
-int viewer()
+static void viewer_window_realize_cb(void *p)
 {
-    Fl_Color fg = FL_BLACK;
-    Fl_Color bg = FL_WHITE;
+    pmesg(3, (char*)"viewer_window_realize\n");
+    //Fl::lock();
+    draw_image_args_t *di_arg = (draw_image_args_t*) p;
+    window->size((di_arg->width > Fl::w() ? Fl::w() : di_arg->width),
+                 (di_arg->height > Fl::h() ? Fl::h() : di_arg->height));
 
-    int r, yes=1;
+    window->position((Fl::w() - window->w())/2,
+                     (Fl::h() - window->h())/2);
+    window->show();
+    //Fl::unlock();
+}
+
+void viewer_disconnected_cb(void *p)
+{
+    disconnected_cb((SharmeUI*) p);
+    Fl::delete_widget(window);
+    window = NULL;
+}
+
+/* end messages to main thread */
+
+static int viewer_bind(void)
+{
+    int r;
+    int on = 1;
     const char *ip = "0.0.0.0";
-    const char *port="8000";
-    socket_t *sock = socket_new(PF_INET, SOCK_STREAM, 0);
-    socket_setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char*)&yes, sizeof(int));
+    const char *port = SHARME_PORT;
+    pmesg(3, (char*)"viewer_bind\n");
+    sock = socket_new(PF_INET, SOCK_STREAM, 0);
+    if (!sock)
+        return 1;
+    socket_setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char*)&on, sizeof(int));
 
     pmesg(1, (char*)"binding to %s:%s...\n", ip, port);
     r = socket_bind(sock, ip, port);
-    pmesg(1, (char*)"binded to %s:%s...(%d)\n", ip, port, r);
 
-    socket_listen(sock, 10);
-    pmesg(1, (char*)"listen...(%d)\n", r);
+    return r;
+}
+
+static int viewer_accept(void)
+{
+    int r;
+    pmesg(3, (char*)"viewer_accept\n");
+    pmesg(1, (char*)"listen...\n");
+    r = socket_listen(sock, 10);
+    if (r < 0)
+        return r;
 
     pmesg(1, (char*)"accept...\n");
     conn = socket_accept0(sock);
+    if (!conn)
+        return 1;
 
+    return 0;
+}
+
+static int viewer_recv_remote_screen_size(int *width, int *height)
+{
+    int r;
     int screen_size;
-    r = socket_recv(conn, (char*)&screen_size, sizeof(int), 0);
-    g_width = screen_size>>16;
-    g_height = (screen_size<<16)>>16;
+    pmesg(3, (char*)"viewer_recv_remote_size\n");
+    r = sharme_recv(conn, (unsigned char*)&screen_size, 4);
+    if (r < 0)
+        return -1;
+
+    *width = screen_size>>16;
+    *height = (screen_size<<16)>>16;
+    return 0;
+}
+
+static inline int viewer_recv_frame_size(int *frame_size)
+{
+    int r;
+    pmesg(3, (char*)"viewer_recv_frame_size\n");
+    r = sharme_recv(conn, (unsigned char*)frame_size, 4);
+    if (r < 0)
+        return -1;
+    return 0;
+}
+
+static inline int viewer_recv_frame(unsigned char *videodata, int frame_size)
+{
+    int r;
+    pmesg(3, (char*)"viewer_recv_frame\n");
+    r = sharme_recv(conn, (unsigned char*)videodata, frame_size);
+    if (r < 0)
+        return -1;
+    return 0;
+}
+
+static inline void viewer_draw_image(unsigned char*data, int width, int height)
+{
+    draw_image_args_t di_arg;
+    di_arg.width = width;
+    di_arg.height = height;
+    di_arg.data = data;
+    Fl::awake(viewer_draw_image_cb, &di_arg);
+}
+
+static inline int viewer_codec_parse_header(SmokeCodecInfo *info,
+                              unsigned char*data, int size,
+                              unsigned int *width, unsigned int *height)
+{
+    pmesg(3, (char*)"viewer_codec_parse_header\n");
+    SmokeCodecFlags flags;
+    unsigned int fps_num, fps_denom;
+    int ret = smokecodec_parse_header(info, data, size,
+                                      &flags, width, height,
+                                      &fps_num, &fps_denom);
+    return ret;
+}
+
+static inline void viewer_window_realize(int width, int height)
+{
+    draw_image_args_t di_arg;
+    di_arg.width = width;
+    di_arg.height = height;
+    di_arg.data = NULL;
+    Fl::awake(viewer_window_realize_cb, &di_arg);
+}
+
+static inline void viewer_get_size(int *width, int *height)
+{
+    pmesg(3, (char*)"viewer_get_size\n");
+    Fl::lock();
+    *width = window->w();
+    *height = window->h();
+    Fl::unlock();
+}
+
+static void viewer_close_sockets(void)
+{
+    pmesg(3, (char*)"viewer_close_sockets\n");
+    if (conn)
+    { 
+        socket_close(conn);
+        socket_del(conn);
+        conn = NULL;
+    }
+    if (sock)
+    {
+        socket_close(sock);
+        socket_del(sock);
+        sock = NULL;
+    }
+}
+
+static void* viewer_receiver(void* parent)
+{
+    int r;
+    bool first_time = true;
+    SmokeCodecInfo *info;
+    int frame_size;
+    unsigned char *videodata;
+
+    unsigned char *out     = 0;
+    unsigned char *rgbout  = 0;
+    unsigned char *rgbout2 = 0;
+
+    unsigned int frame_width;
+    unsigned int frame_height;
+
+    int viewer_width;
+    int viewer_height;
+
+    unsigned int last_viewer_width = 0;
+    unsigned int last_viewer_height = 0;
+    unsigned long outsize = 0;
+
+    pmesg(3, (char*)"viewer_receiver\n");
+
+    if (viewer_bind() != 0)
+    {
+        pmesg(1, (char*)"error create/bind socket\n");
+        goto error;
+    }
+
+    Fl::awake(ready_cb, parent);
+
+    if (viewer_accept() != 0)
+    {
+        pmesg(1, (char*)"error listen/accepting connection\n");
+        goto error;
+    }
+
+    pmesg(1, (char*)"start...\n");
+    Fl::awake(connected_cb, parent);
+
+    if (viewer_recv_remote_screen_size(&g_width, &g_height) != 0)
+    {
+        pmesg(1, (char*)"error recv remote screen size\n");
+        goto error;
+    }
     pmesg(1, (char*)"remote screen size (%d:%d)\n", g_width, g_height);
 
+    smokecodec_decode_new(&info);
 
+    videodata = (unsigned char*) malloc(sizeof(unsigned char)
+                * g_width*g_height + g_width*g_height/2);
+    if (!videodata)
+    {
+        pmesg(1, (char*)"error out of memory for videodata\n");
+        goto error;
+    }
 
+    while(true)
+    {
 
-  Viewer window(640,480);
-  window.resizable(window);
+        if (viewer_recv_frame_size(&frame_size) != 0)
+        {
+            pmesg(1, (char*)"error recv frame size\n");
+            break;
+        }
 
-  window.end();
-  window.show();
-  fl_cursor(Fl_Cursor(0),fg,bg);
-  //fl_cursor(FL_CURSOR_NONE,fg,bg);
+        if (viewer_recv_frame(videodata, frame_size) != 0)
+        {
+            pmesg(1, (char*)"error recv frame\n");
+            break;
+        }
 
-  Fl_Thread receiver_thread;
+        //pmesg(1, (char*)"codec parse header\n");
+        r = viewer_codec_parse_header(info, videodata, frame_size,
+                                  &frame_width, &frame_height);
+        //pmesg(1, (char*)"codec parse header (%d)\n", r);
 
-  Fl::unlock();
-  Fl::lock();
-  fl_create_thread(receiver_thread, receiver_func, (void*)&window);
+        if (first_time) {
+            first_time = false;
+            viewer_window_realize(frame_width, frame_height);
+        }
 
-  window.make_current();
-  int ret = Fl::run();
+        viewer_get_size(&viewer_width, &viewer_height);
 
-  pmesg(1, (char*)"closing socket...\n");
-  socket_close(conn);
-  socket_close(sock);
-  return ret;
+        if ((last_viewer_width != viewer_width)
+             || (last_viewer_height != viewer_height))
+        {
+            if (out) free(out);
+            if (rgbout) free(rgbout);
+            if (rgbout2) free(rgbout2);
+
+            outsize = frame_width * frame_height
+                      + frame_width * frame_height / 2;
+
+            out = (unsigned char*) malloc(sizeof(unsigned char) * outsize);
+            rgbout = (unsigned char*) malloc(sizeof(unsigned char)
+                                           * frame_width * frame_height * 3);
+            rgbout2 = (unsigned char*) malloc(sizeof(unsigned char)
+                                           * viewer_width * viewer_height * 3);
+        }
+
+        //pmesg(1, (char*)"codec decode\n");
+        smokecodec_decode(info,
+                          (const unsigned char*) videodata,
+                          frame_size, out);
+
+        if (frame_width == viewer_width && frame_height == viewer_height)
+        {
+            yuv420p2rgb(out, rgbout2, frame_width, frame_height, 3);
+        }
+        else
+        {
+            yuv420p2rgb(out, rgbout, frame_width, frame_height, 3);
+            resample(rgbout, frame_width, frame_height, 3,
+                     rgbout2, viewer_width, viewer_height);
+        }
+
+        viewer_draw_image(rgbout2, viewer_width, viewer_height);
+
+        last_viewer_width = viewer_width;
+        last_viewer_height = viewer_height;
+    }
+error:
+    Fl::awake(viewer_disconnected_cb, parent);
+    if (out) free(out);
+    if (rgbout) free(rgbout);
+    if (rgbout2) free(rgbout2);
+    free(videodata);
+    viewer_close_sockets();
+    pmesg(1, (char*)"exiting viewer thread\n");
+}
+
+void sharme_viewer_stop(void)
+{
+    pmesg(3, (char*)"sharme_viewer_stop\n");
+    if (conn)
+    {
+        socket_shutdown(conn, 2);
+        socket_shutdown(sock, 2);
+    }
+    else
+    {
+        socket_shutdown(sock, 2);
+    }
+    /* on win32 this is needed */
+    viewer_close_sockets();
+}
+
+static void viewer_close(Fl_Widget*, void*)
+{
+    pmesg(3, (char*)"viewer_close\n");
+    sharme_viewer_stop();
+}
+
+static Viewer* viewer_create_window(void)
+{
+    pmesg(3, (char*)"viewer_create_window\n");
+    Viewer *w = new Viewer(640, 480);
+    w->resizable(w);
+    w->end();
+    w->callback(viewer_close);
+    return w;
+}
+
+int sharme_viewer_start(void *parent)
+{
+    pmesg(3, (char*)"sharme_viewer_start\n");
+    window = viewer_create_window();
+
+    Fl_Thread sharme_viewer_thread;
+    fl_create_thread(sharme_viewer_thread, viewer_receiver, (void*)parent);
+
+    return 0;
 }
 

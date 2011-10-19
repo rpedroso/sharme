@@ -229,11 +229,14 @@ void screenshot_free_image(screenshot_t *self)
 void screenshot_dealloc(screenshot_t *self)
 {
     pmesg(9, "screenshot_dealloc\n");
+    if (!self) return;
+
     if (self->priv)
     {
         screenshot_free_image(self);
         free(self->priv);
     }
+    free(self);
 }
 
 screenshot_t* screenshot_new()

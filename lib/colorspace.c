@@ -11,12 +11,12 @@ inline void rgb2yuv420p(const unsigned char *rgb, unsigned char *yuv420p, const 
 #define sR (rgb[s+2])
 #define sG (rgb[s+1])
 #define sB (rgb[s+0])
-//#define sR ((rgb[s+2]>>5)<<5)
-//#define sG ((rgb[s+1]>>5)<<5)
-//#define sB ((rgb[s+0]>>5)<<5)
-//#define sR (rgb[s+2]&0xf7)
-//#define sG (rgb[s+1]&0xf7)
-//#define sB (rgb[s+0]&0xf7)
+//#define sR ((rgb[s+2]>>6)<<6)
+//#define sG ((rgb[s+1]>>6)<<6)
+//#define sB ((rgb[s+0]>>6)<<6)
+//#define sR (rgb[s+2]&0xf0)
+//#define sG (rgb[s+1]&0xf0)
+//#define sB (rgb[s+0]&0xf0)
 
   for (j=0; j < height; j++)
   {

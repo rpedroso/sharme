@@ -1,0 +1,140 @@
+# data file for the Fltk User Interface Designer (fluid)
+version 1.0110 
+header_name {.h} 
+code_name {.cxx}
+decl {\#include "enums.h"} {} 
+
+class SharmeUI {open
+} {
+  decl {int state;} {public
+  }
+  Function {SharmeUI()} {open
+  } {
+    Fl_Window sharme_window {
+      label sharme open
+      xywh {551 173 445 250} type Double visible
+    } {
+      Fl_Box lb_header {
+        label {sharme session 0.0} selected
+        xywh {7 8 428 29} box THIN_UP_FRAME labeltype SHADOW_LABEL labelfont 1 labelsize 20
+      }
+      Fl_Group {} {
+        label status open
+        xywh {7 41 422 25} labeltype NO_LABEL
+      } {
+        Fl_Box status_led {
+          xywh {8 45 14 14} box FLAT_BOX color 1
+        }
+        Fl_Box status_label {
+          label disconnected
+          xywh {27 41 402 24} labeltype ENGRAVED_LABEL labelsize 12 align 20
+        }
+      }
+      Fl_Group gr_mode {
+        label {mode:}
+        xywh {7 84 210 76} box THIN_DOWN_BOX labeltype ENGRAVED_LABEL align 5
+      } {
+        Fl_Round_Button rb_manage {
+          label {&manage remote screen}
+          xywh {15 95 200 25} type Radio down_box THIN_DOWN_BOX value 1 labeltype ENGRAVED_LABEL
+        }
+        Fl_Round_Button rb_share {
+          label {s&hare my screen}
+          xywh {15 120 200 25} type Radio down_box THIN_DOWN_BOX labeltype ENGRAVED_LABEL
+        }
+      }
+      Fl_Group gr_props {
+        xywh {225 63 213 100}
+      } {
+        Fl_Input te_server {
+          label {connect to:}
+          xywh {225 84 210 26} box THIN_DOWN_BOX labeltype ENGRAVED_LABEL align 5
+        }
+        Fl_Value_Slider sl_quality {
+          label {quality:}
+          xywh {225 138 210 22} type Horizontal box THIN_DOWN_BOX labeltype ENGRAVED_LABEL align 5 minimum 1 maximum 100 step 1 value 40 textfont 1
+        }
+      }
+      Fl_Input te_keycode {
+        label {Key code:}
+        xywh {225 184 210 26} box THIN_DOWN_BOX labeltype ENGRAVED_LABEL align 5
+      }
+      Fl_Group {} {
+        label buttons
+        xywh {225 216 210 28} labeltype NO_LABEL
+      } {
+        Fl_Button bt_exit {
+          label {e&xit}
+          xywh {225 217 100 24} box THIN_UP_BOX down_box THIN_DOWN_BOX labeltype ENGRAVED_LABEL
+        }
+        Fl_Return_Button bt_start {
+          label {&start}
+          xywh {335 217 100 24} box THIN_UP_BOX down_box THIN_DOWN_BOX labeltype ENGRAVED_LABEL
+        }
+      }
+    }
+  }
+  Function {show(int argc, char **argv)} {open
+  } {
+    code {this->state = SHARME_STOPPED;
+sharme_window->show(argc, argv);} {}
+  }
+  Function {disconnected()} {open
+  } {
+    code {this->status_led->color(FL_RED);
+this->status_led->redraw();
+this->status_label->label("disconnected");
+this->gr_mode->activate();
+if (this->rb_manage->value())
+{
+    this->gr_props->deactivate();
+}
+else
+{
+    this->gr_props->activate();
+}
+this->bt_start->activate();
+this->bt_exit->label("e&xit");
+this->bt_exit->activate();
+this->te_keycode->activate();
+this->state = SHARME_STOPPED;} {}
+  }
+  Function {connected()} {open
+  } {
+    code {this->status_led->color(FL_GREEN);
+this->status_led->redraw();
+this->status_label->label("connected");
+this->gr_mode->deactivate();
+this->gr_props->deactivate();
+this->bt_start->deactivate();
+this->bt_exit->activate();
+this->bt_exit->label("&stop");
+this->te_keycode->deactivate();
+this->state = SHARME_STARTED;} {}
+  }
+  Function {ready()} {open
+  } {
+    code {this->status_led->color(FL_YELLOW);
+this->status_led->redraw();
+this->status_label->label("ready");
+this->gr_mode->deactivate();
+this->gr_props->deactivate();
+this->bt_start->deactivate();
+this->te_keycode->deactivate();
+this->bt_exit->label("&stop");
+this->state = SHARME_STARTED;} {}
+  }
+  Function {connecting()} {open
+  } {
+    code {this->status_led->color(FL_YELLOW);
+this->status_led->redraw();
+this->status_label->label("connecting");
+this->gr_mode->deactivate();
+this->gr_props->deactivate();
+this->bt_start->deactivate();
+this->bt_exit->label("&stop");
+this->bt_exit->deactivate();
+this->te_keycode->deactivate();
+this->state = SHARME_STARTED;} {}
+  }
+} 

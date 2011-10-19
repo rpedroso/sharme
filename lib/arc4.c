@@ -1,95 +1,58 @@
-/*
- * ARC4 implementation
- *      A Stream Cipher Encryption Algorithm "Arcfour"
- *      <draft-kaukonen-cipher-arcfour-03.txt>
- */
-
-/*        This code illustrates a sample implementation
- *                 of the Arcfour algorithm
- *         Copyright (c) April 29, 1997 Kalle Kaukonen.
- *                    All Rights Reserved.
- *
- * Redistribution and use in source and binary forms, with or
- * without modification, are permitted provided that this copyright
- * notice and disclaimer are retained.
- *
- * THIS SOFTWARE IS PROVIDED BY KALLE KAUKONEN AND CONTRIBUTORS ``AS
- * IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL KALLE
- * KAUKONEN OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
-
-//#include <sys/cdefs.h>
-//#include <sys/types.h>
 #include "arc4.h"
 
-//struct arc4_ctx {
-//        unsigned int    x;
-//        unsigned int    y;
-//        unsigned int    state[256];
-//        /* was unsigned char, changed to int for performance -- onoe */
-//};
-
-int arc4_ctxlen(void)
+static void swap_byte(unsigned char *a, unsigned char *b);
+void prepare_key(unsigned char *key_data_ptr, int key_data_len, rc4_key *key)
 {
-    return sizeof(struct arc4_ctx);
-}
-
-void arc4_setkey(void *ctxp, const unsigned char *key, unsigned int keylen)
-{
-    struct arc4_ctx *ctx = ctxp;
-    unsigned int i, t, u, ki, si;
-    unsigned int *state;
-    
-    state = ctx->state;
-    ctx->x = 0;
-    ctx->y = 0;
-    for (i = 0; i < 256; i++)
-        state[i] = i;
-    ki = si = 0;
-    for (i = 0; i < 256; i++) {
-        t = state[i];
-        si = (si + key[ki] + t) & 0xff;
-        u = state[si];
-        state[si] = t;
-        state[i] = u;
-        if (++ki >= keylen)
-            ki = 0;
+    unsigned char swapByte;
+    unsigned char index1;
+    unsigned char index2;
+    unsigned char* state;
+    short counter;
+ 
+    state = &key->state[0];
+    for(counter = 0; counter < 256; counter++)
+    state[counter] = counter;
+    key->x = 0;
+    key->y = 0;
+    index1 = 0;
+    index2 = 0;
+    for(counter = 0; counter < 256; counter++)
+    {
+         index2 = (key_data_ptr[index1] + state[counter] + index2) % 256;
+         swap_byte(&state[counter], &state[index2]);
+         index1 = (index1 + 1) % key_data_len;
     }
 }
 
-void arc4_encrypt(void *ctxp, unsigned char *dst, const unsigned char *src, int len)
+void rc4(unsigned char *buffer_ptr, int buffer_len, rc4_key *key)
 {
-    struct arc4_ctx *ctx = ctxp;
-    unsigned int x, y, sx, sy;
-    unsigned int *state;
-    const unsigned char *endsrc;
-    
-    state = ctx->state;
-    x = ctx->x;
-    y = ctx->y;
-    for (endsrc = src + len; src != endsrc; src++, dst++) {
-        x = (x + 1) & 0xff;
-        sx = state[x];
-        y = (sx + y) & 0xff;
-        state[x] = sy = state[y];
-        state[y] = sx;
-        *dst = *src ^ state[(sx + sy) & 0xff];
-    }
-    ctx->x = x;
-    ctx->y = y;
+    unsigned char x;
+    unsigned char y;
+    unsigned char* state;
+    unsigned char xorIndex;
+    short counter;
+
+    x = key->x;
+    y = key->y;
+
+    state = &key->state[0];
+    for(counter = 0; counter < buffer_len; counter ++)
+    {
+         x = (x + 1) % 256;
+         y = (state[x] + y) % 256;
+         swap_byte(&state[x], &state[y]);
+         xorIndex = state[x] + (state[y]) % 256;
+         buffer_ptr[counter] ^= state[xorIndex];
+     }
+     key->x = x;
+     key->y = y;
 }
 
-void arc4_decrypt(void *ctxp, unsigned char *dst, const unsigned char *src, int len)
+static void swap_byte(unsigned char *a, unsigned char *b)
 {
+    unsigned char swapByte;
 
-    arc4_encrypt(ctxp, dst, src, len);
+    swapByte = *a;
+    *a = *b;
+    *b = swapByte;
 }
