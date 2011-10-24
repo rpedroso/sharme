@@ -1,148 +1,103 @@
 #include <windows.h>
 
+/* from Fl_get_key_win32.cxx */
+static const struct {unsigned short vk, fltk;} vktab[] = {
+  {VK_SPACE,    ' '},
+  {'1',         '!'},
+  {0xde,        '\"'},
+  {'3',         '#'},
+  {'4',         '$'},
+  {'5',         '%'},
+  {'7',         '&'},
+  {0xde,        '\''},
+  {'9',         '('},
+  {'0',         ')'},
+  {'8',         '*'},
+  {0xbb,        '+'},
+  {0xbc,        ','},
+  {0xbd,        '-'},
+  {0xbe,        '.'},
+  {0xbf,        '/'},
+  {0xba,        ':'},
+  {0xba,        ';'},
+  {0xbc,        '<'},
+  {0xbb,        '='},
+  {0xbe,        '>'},
+  {0xbf,        '?'},
+  {'2',         '@'},
+  {0xdb,        '['},
+  {0xdc,        '\\'},
+  {0xdd,        ']'},
+  {'6',         '^'},
+  {0xbd,        '_'},
+  {0xc0,        '`'},
+  {0xdb,        '{'},
+  {0xdc,        '|'},
+  {0xdd,        '}'},
+  {0xc0,        '~'},
+  {VK_BACK,     FL_BackSpace},
+  {VK_TAB,      FL_Tab},
+  {VK_CLEAR,    0xff0b/*XK_Clear*/},
+  {VK_RETURN,   FL_Enter},
+  {VK_PAUSE,    FL_Pause},
+  {VK_SCROLL,   FL_Scroll_Lock},
+  {VK_ESCAPE,   FL_Escape},
+  {VK_HOME,     FL_Home},
+  {VK_LEFT,     FL_Left},
+  {VK_UP,       FL_Up},
+  {VK_RIGHT,    FL_Right},
+  {VK_DOWN,     FL_Down},
+  {VK_PRIOR,    FL_Page_Up},
+  {VK_NEXT,     FL_Page_Down},
+  {VK_END,      FL_End},
+  {VK_SNAPSHOT, FL_Print},
+  {VK_INSERT,   FL_Insert},
+  {VK_APPS,     FL_Menu},
+  {VK_NUMLOCK,  FL_Num_Lock},
+//{VK_???,      FL_KP_Enter},
+  {VK_MULTIPLY, FL_KP+'*'},
+  {VK_ADD,      FL_KP+'+'},
+  {VK_SUBTRACT, FL_KP+'-'},
+  {VK_DECIMAL,  FL_KP+'.'},
+  {VK_DIVIDE,   FL_KP+'/'},
+  {VK_LSHIFT,   FL_Shift_L},
+  {VK_RSHIFT,   FL_Shift_R},
+  {VK_LCONTROL, FL_Control_L},
+  {VK_RCONTROL, FL_Control_R},
+  {VK_CAPITAL,  FL_Caps_Lock},
+  {VK_LWIN,     FL_Meta_L},
+  {VK_RWIN,     FL_Meta_R},
+  {VK_LMENU,    FL_Alt_L},
+  {VK_RMENU,    FL_Alt_R},
+  {VK_DELETE,   FL_Delete}
+};
+
+static int fltk2ms(int fltk) {
+  if (fltk >= '0' && fltk <= '9') return fltk;
+  if (fltk >= 'A' && fltk <= 'Z') return fltk;
+  if (fltk >= 'a' && fltk <= 'z') return fltk-('a'-'A');
+  if (fltk > FL_F && fltk <= FL_F+16) return fltk-(FL_F-(VK_F1-1));
+  if (fltk >= FL_KP+'0' && fltk<=FL_KP+'9') return fltk-(FL_KP+'0'-VK_NUMPAD0);
+  int a = 0;
+  int b = sizeof(vktab)/sizeof(*vktab);
+  while (a < b) {
+    int c = (a+b)/2;
+    if (vktab[c].fltk == fltk) return vktab[c].vk;
+    if (vktab[c].fltk < fltk) a = c+1; else b = c;
+  }
+  return 0;
+}
+/* end: from Fl_get_key_win32.cxx */
+
 void process_key(char action, int key)
 {
-            int key_flag = (action == 'K') ? KEYEVENTF_KEYUP: 0;
+    int key_flag = (action == 'K') ? KEYEVENTF_KEYUP: 0;
+    
+    int vkkey;
 
-            int vkkey;
-            if (key < 256)
-            {
-                vkkey = VkKeyScan(key);
-            }
-            else if (key > FL_F && key <= FL_F_Last)
-            {
-                key = key - FL_F;
-                vkkey = VK_F1 + (key-1);
-            }
-            else if (key >= FL_KP && key <= FL_KP_Last)
-            {
-                key = key - FL_KP;
-                vkkey = VK_NUMPAD0 + (key-48);
-            }
-            else if (key == FL_Shift_L)
-            {
-                vkkey = VK_LSHIFT;
-            }
-            else if (key == FL_Shift_R)
-            {
-                vkkey = VK_RSHIFT;
-            }
-            else if (key == FL_Caps_Lock)
-            {
-                vkkey = VK_CAPITAL;
-            }
-            else if (key == FL_Page_Up)
-            {
-                vkkey = VK_PRIOR;
-            }
-            else if (key == FL_Page_Down)
-            {
-                vkkey = VK_NEXT;
-            }
-            else if (key == FL_Home)
-            {
-                vkkey = VK_HOME;
-            }
-            else if (key == FL_End)
-            {
-                vkkey = VK_END;
-            }
-            else if (key == FL_Left)
-            {
-                vkkey = VK_LEFT;
-            }
-            else if (key == FL_Right)
-            {
-                vkkey = VK_RIGHT;
-            }
-            else if (key == FL_Up)
-            {
-                vkkey = VK_UP;
-            }
-            else if (key == FL_Down)
-            {
-                vkkey = VK_DOWN;
-            }
-            else if (key == FL_Insert)
-            {
-                vkkey = VK_INSERT;
-            }
-            else if (key == FL_Delete)
-            {
-                vkkey = VK_DELETE;
-            }
-            else if (key == FL_Num_Lock)
-            {
-                vkkey = VK_NUMLOCK;
-            }
-            else if (key == FL_Scroll_Lock)
-            {
-                vkkey = VK_SCROLL;
-            }
-            else if (key == FL_Control_L)
-            {
-                vkkey = VK_LCONTROL;
-            }
-            else if (key == FL_Control_R)
-            {
-                vkkey = VK_RCONTROL;
-            }
-            else if (key == FL_Alt_L)
-            {
-                vkkey = VK_MENU;
-            }
-            else if (key == 0xfe03)
-            {
-                vkkey = VK_RMENU;
-            }
-            else if (key == FL_Meta_L)
-            {
-                vkkey = VK_LWIN;
-            }
-            else if (key == FL_Meta_R)
-            {
-                vkkey = VK_RWIN;
-            }
-            else if (key == FL_Menu)
-            {
-                vkkey = VK_APPS;
-            }
-            else if (key == 0xfe53) // dead key ~
-            {
-                key = '~';
-                vkkey = VkKeyScan(key);
-            }
-            else if (key == 0xfe52) // dead key ^
-            {
-                key = '^';
-                vkkey = VkKeyScan(key);
-            }
-            else if (key == 0xfe51) // dead key ´
-            {
-                key = '´';
-                vkkey = VkKeyScan(key);
-            }
-            else if (key == 0xfe50) // dead key `
-            {
-                key = '`';
-                vkkey = VkKeyScan(key);
-            }
-            else
-            {
-                vkkey = key;
-            }
-            //int bShift = (key & 0x00100000);
-            //int bCaps = (vkkey & 0x00100000);
-            //int bCtrl = (key & 0x400);
-            //int bAlt = (key & 0x800);
-            //key = (vkkey & 0xFF);
-
-            //pmesg(0, "%bbShift: %d\n", bShift);
-            //pmesg(0, "%bbCaps: %d\n", bCaps);
-            //pmesg(0, "%bbCtrl: %d\n", bCtrl);
-            pmesg(9, (char*)"key: %d\n", key);
-
-            keybd_event((char)vkkey, (char)key, key_flag, 0);
+    //pmesg(9, (char*)"key: %d\n", key);
+    vkkey = fltk2ms(key);
+    keybd_event((char)vkkey, (char)key, key_flag, 0);
 }
 
 void cleanup_keys(void)
