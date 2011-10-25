@@ -129,8 +129,9 @@ int main(int argc, char *argv[])
         " -se[rver] <ip> : share desktop with <ip>\n"
         " -q[uality] <ip> : image quality\n"
         " -key[code] <key> : key code\n"
-        " FLTK options\n",
-        argv[i], argv[0]);
+        " FLTK options\n"
+        "%s\n",
+        argv[i], argv[0], Fl::help);
 
     if (helpFlag)
         Fl::fatal("usage: %s [options]\n"
