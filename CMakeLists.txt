@@ -20,21 +20,21 @@ if(WINDOWS)
     add_definitions("-D__MSW__")
 endif(WINDOWS)
 
-if(LINUX)
+if(UNIX)
     add_definitions("-D__XLIB__")
-endif(LINUX)
+endif(UNIX)
 
 #find_package(JPEG REQUIRED)
 #include_directories(${JPEG_INCLUDE_DIRS})
 #set(LIBS ${LIBS} ${JPEG_LIBRARIES})
 
 add_definitions("-O3")
-#add_definitions("-g")
+add_definitions("-g")
 add_definitions("-ffast-math")
 
-if(LINUX)
-    find_package (Threads REQUIRED)
-endif(LINUX)
+#if(LINUX)
+#    find_package (Threads REQUIRED)
+#endif(LINUX)
  
 # add the binary tree to the search path for include files
 include_directories("${PROJECT_BINARY_DIR}/src")

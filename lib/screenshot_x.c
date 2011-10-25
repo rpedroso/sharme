@@ -2,6 +2,7 @@
 //#include <jpeglib.h>
 #include <stdlib.h>
 #include "screenshot.h"
+#include "debug.h"
 #include "screenshot_x.h"
 
 #define HAVE_XSHM
