@@ -41,27 +41,28 @@
     <h2>Dependencies</h2>
 <ul>
 <li>FLTK</li>
-<li>zlib</li>
 <li>jpeglib</li>
 <li>cmake</li>
+<li>X11 (linux)</li>
+<li>XTest (linux)</li>
 </ul>
 <h2>Build it</h2>
-<p>Assuming all the builds from a linux 64 bit host.</p>
+<p>Assuming all builds from a linux 64 bit host.</p>
 <h2>Build linux 32 bit binary:</h2>
 <pre><code>$ cd &lt;to_source_dir&gt;
 $ mkdir bld_lin32
 $ cd bld_lin32
 $ export CFLAGS=-m32 CXXFLAGS=-m32
-$ cmake -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchain-linux.cmake ..
+$ cmake ..
 $ make
 </code></pre>
 <h2>Build linux 64 bit binary:</h2>
 <pre><code>$ cd &lt;to_source_dir&gt;
 $ mkdir bld_lin64
 $ cd bld_lin64
-$ # if you have set CFLAGS and CXXFLAGS for 32 bit unset them first
+$ # if you have set CFLAGS and CXXFLAGS above, for 32 bit unset them first
 $ unset CFLAGS CXXFLAGS
-$ cmake -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchain-linux.cmake ..
+$ cmake ..
 $ make
 </code></pre>
 <h2>Build windows 32 bit binary</h2>
@@ -75,7 +76,8 @@ $ cd bld_win32
 $ cmake -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchain-mingw32.cmake ..
 $ make
 </code></pre>
-<p>optional, you can strip and compress the binary:</p>
+<h2>Optional</h2>
+<p>You can strip and compress the binary:</p>
 <pre><code>$ strip sharme(.exe)
 $ upx -9 sharme(.exe)
 </code></pre>

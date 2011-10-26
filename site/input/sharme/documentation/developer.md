@@ -4,12 +4,6 @@ title: developer
 ---
 
 sharme in its current form has a simple codebase.
-I tried to go with [ravioli code][1], and overall I think I have
-achieve that.
-Some parts, however, has some [spaghetti code][1], especially
-the src/viewer.cpp
-
-[1]: http://en.wikipedia.org/wiki/Spaghetti_code
 
 The way it works is:
 --------------------

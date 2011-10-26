@@ -15,11 +15,11 @@ internaly, at the company I work for.
 
 Since I developed it to do a single job and it is doing
 well, at least for me, I decide to open source it in the hope
-of getting help from talent developers to leverage the quality
-of this simple app or at least pointing me at some mistakes I may had
-made.
+of getting some help.
+You do not need to be a developer to help, using it and give
+some feedback is a valuable help also.
 
-The other reason is because I'm a true beliver in the open source
+The other reason is because I am a true beliver in the open source
 culture and using open source to develop it, it make sense to open
 source it too.
 
@@ -30,5 +30,6 @@ Well, it's the usual, it's more fun to develop and use my own.
 
 ***
 
-> if you see any inconsistences, any wrong phrase or word in this site, please drop me a
-note in the [mailing](http://groups.google.com/group/sharme). The same is valid for enhancements.
+> if you see any inconsistences, any wrong phrase or words in this site, please drop me a
+note in the [mailing](http://groups.google.com/group/sharme).
+The same is valid for enhancements.

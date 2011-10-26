@@ -1,6 +1,8 @@
 menu-position: 4
 ---
 
+Current version 0.2 (released: Wed 26 Oct 2011):
+
 * [windows binary](/sharme/download/sharme.exe)
 ({%
 import os
@@ -15,5 +17,5 @@ print(os.path.getsize("input/sharme/download/sharme_upx.exe")) / 1024
 
 ***
 
-> See [build](/sharme/documentation/build.html) to learn how to build from source
+> See [build](/sharme/documentation/build.html) to build it from source
 and [user documentation](/sharme/documentation/user.html) how to use it.
