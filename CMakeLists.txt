@@ -3,7 +3,7 @@ project (sharme)
 
 # The version number.
 set (sharme_VERSION_MAJOR 0)
-set (sharme_VERSION_MINOR 1)
+set (sharme_VERSION_MINOR 2)
 set (sharme_LABEL_HEADER "\"sharme session ${sharme_VERSION_MAJOR}.${sharme_VERSION_MINOR}\"")
  
 set (sharme_PORT "\"8000\"")
