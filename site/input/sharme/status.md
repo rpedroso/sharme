@@ -15,10 +15,3 @@ The limited tests cases I've made, as they cover my real needs, are:
 
 Of couse I'm planning do some more as time permits.
 
-***
-
-> ### IMPORTANT
-I did not put any efforts on security concerns.
-At the moment I only encrypt the desktop image data using arc4
-with a hard coded key.
-
