@@ -114,11 +114,13 @@ socket_t* socket_accept(socket_t *self, struct sockaddr *addr, socklen_t *addrle
 
 int socket_recv(socket_t *self, void *buf, int len, int flags)
 {
+    if (!self) return -1;
     return recv(self->fd, (char*)buf, len, flags);
 }
 
 int socket_send(socket_t *self, const void *buf, int len, int flags)
 {
+    if (!self) return -1;
     return send(self->fd, (const char*)buf, len, flags);
 }
 
@@ -128,6 +130,8 @@ int socket_sendall(socket_t *self, const void *buf, int *len, int flags)
     int total = 0;
     int bytesleft = *len; // how many we have left to send
     int n;
+
+    if (!self) return -1;
 
     //printf("to send: %d\n", *len);
     while(total < *len) {
@@ -145,6 +149,7 @@ int socket_sendall(socket_t *self, const void *buf, int *len, int flags)
 
 int socket_shutdown(socket_t *self, int how)
 {
+    if (!self) return -1;
     return shutdown(self->fd, how);
 }
 static socket_t* socket_init(int family, int type, int proto)
