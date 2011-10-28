@@ -35,3 +35,11 @@ void mouse_move(int x, int y)
 {
     SetCursorPos(x, y);
 }
+
+void mouse_wheel(int flag)
+{
+    GetCursorPos(&p);
+    if (flag == 4) flag = 1;
+    else flag = -1;
+    mouse_event(MOUSEEVENTF_WHEEL, p.x, p.y, flag*WHEEL_DELTA, 0);
+}

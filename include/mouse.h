@@ -11,6 +11,7 @@ void mouse_left_up(void);
 void mouse_right_down(void);
 void mouse_right_up(void);
 void mouse_move(int x, int y);
+void mouse_wheel(int flag);
 
 #ifdef __cplusplus
 }

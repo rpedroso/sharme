@@ -1,4 +1,4 @@
-//#include <stdio.h>
+#include <stdio.h>
 #include <unistd.h>
 
 #include <FL/Fl.H>
@@ -93,8 +93,14 @@ class Viewer : public Fl_Double_Window
             sharme_tcp_nodelay(conn);
             sharme_send(conn, (unsigned char*)&pos, 4);
             break;
-        //case 19: // FL_WHEEL
-        //    break;
+        case 19: // FL_WHEEL
+            sharme_tcp_nodelay(conn);
+            if(Fl::event_key()-FL_Button == 4) // UP
+                cmd = 'W';
+            else
+                cmd = 'w';
+            sharme_send(conn, (unsigned char*)&cmd, 1);
+            break;
         case FL_KEYDOWN:
             sharme_tcp_delay(conn);
             key = Fl::event_key();

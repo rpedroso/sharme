@@ -42,3 +42,9 @@ void mouse_move(int x, int y)
   XFlush(disp);
 }
 
+void mouse_wheel(int flag)
+{
+    XTestFakeButtonEvent(disp, flag, 1, CurrentTime);
+    XTestFakeButtonEvent(disp, flag, 0, CurrentTime);
+    XFlush(disp);
+}

@@ -112,6 +112,12 @@ static void *sharme_recv_input(void *arg)
             y = (pos<<16)>>16;
             mouse_move(x, y);
             break;
+        case 'W':
+            mouse_wheel(4);
+            break;
+        case 'w':
+            mouse_wheel(5);
+            break;
         case 'k':
         case 'K':
             //key_flag = (action == 'K') ? KEYEVENTF_KEYUP: 0;
