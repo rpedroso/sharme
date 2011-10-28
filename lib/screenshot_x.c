@@ -29,7 +29,7 @@ Context* display_open(const char *display_name)
   xcontext = (Context*) malloc(sizeof(Context));
 
   xcontext->disp = XOpenDisplay(display_name);
-  printf("opened display %p\n", xcontext->disp);
+  //printf("opened display %p\n", xcontext->disp);
   if (!xcontext->disp) {
     free (xcontext);
     return NULL;
@@ -41,14 +41,14 @@ Context* display_open(const char *display_name)
   xcontext->white = XWhitePixel (xcontext->disp, xcontext->screen_num);
   xcontext->black = XBlackPixel (xcontext->disp, xcontext->screen_num);
   xcontext->depth = DefaultDepthOfScreen (xcontext->screen);
-  printf("Depth %d\n", xcontext->depth); 
+  //printf("Depth %d\n", xcontext->depth); 
   xcontext->width = DisplayWidth (xcontext->disp, xcontext->screen_num);
   xcontext->height = DisplayHeight (xcontext->disp, xcontext->screen_num);
           
   xcontext->widthmm = DisplayWidthMM (xcontext->disp, xcontext->screen_num);
   xcontext->heightmm = DisplayHeightMM (xcontext->disp, xcontext->screen_num);
 
-  printf("bitorder %d\n", ImageByteOrder (xcontext->disp));
+  //printf("bitorder %d\n", ImageByteOrder (xcontext->disp));
   return xcontext;
 }
 
@@ -76,22 +76,22 @@ XImage* ximage_new (Context *xcontext, int width, int height)
         xcontext->visual, xcontext->depth,
         ZPixmap, NULL, &SHMInfo, ximage->width, ximage->height);
     if (!ximage) {
-      printf("!ximage\n");
+      //printf("!ximage\n");
       goto beach; 
     }
     
     ///* we have to use the returned bytes_per_line for our shm size */
     size = ximage->bytes_per_line * ximage->height;
-    printf("size %d\n", size);
+    //printf("size %d\n", size);
     SHMInfo.shmid = shmget (IPC_PRIVATE, size, IPC_CREAT | 0777);
     if (SHMInfo.shmid == -1) {
-      printf("shmid == -1\n");
+      //printf("shmid == -1\n");
       goto beach;
     }
     
     SHMInfo.shmaddr = shmat (SHMInfo.shmid, 0, 0);
     if (SHMInfo.shmaddr == ((void *) -1)) {
-      printf("shaddr == -1\n");
+      //printf("shaddr == -1\n");
       goto beach;
     }
     SHMInfo.readOnly = 0;
@@ -103,7 +103,7 @@ XImage* ximage_new (Context *xcontext, int width, int height)
     ximage->data = SHMInfo.shmaddr;
 
     if (XShmAttach (xcontext->disp, &SHMInfo) == 0) {
-      printf("Falied to attach\n");
+      //printf("Falied to attach\n");
       goto beach;
     }
 

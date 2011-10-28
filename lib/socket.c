@@ -106,7 +106,7 @@ socket_t* socket_accept(socket_t *self, struct sockaddr *addr, socklen_t *addrle
               get_in_addr(addr),
               s, sizeof s);
 */
-    printf("%s\n", inet_ntoa(((struct sockaddr_in*)addr)->sin_addr));
+    //printf("%s\n", inet_ntoa(((struct sockaddr_in*)addr)->sin_addr));
 
 
     return new_self;
