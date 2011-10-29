@@ -208,6 +208,24 @@ static int viewer_accept(void)
     return 0;
 }
 
+static int viewer_recv_protocol_version(void)
+{
+    int r;
+    char proto_version[8];
+    pmesg(3, (char*)"viewer_recv_protocol_version\n");
+    r = sharme_recv(conn, (unsigned char*)proto_version, 7);
+    if (r < 0)
+    {
+        return -1;
+    }
+    proto_version[7] = '\0';
+    if (strncmp(proto_version, "SSP0001", 7) != 0)
+    {
+        return -2;
+    }
+    return 0;
+}
+
 static int viewer_recv_remote_screen_size(int *width, int *height)
 {
     int r;
@@ -340,6 +358,14 @@ static void* viewer_receiver(void* parent)
     pmesg(1, (char*)"start...\n");
     Fl::awake(connected_cb, parent);
 
+    if ((r=viewer_recv_protocol_version()) < 0)
+    {
+        if (r == -2)
+            pmesg(1, (char*)"incorrect protocol advertisement\n");
+        else
+            pmesg(1, (char*)"error receiving protocol version\n");
+        goto error;
+    }
     if (viewer_recv_remote_screen_size(&g_width, &g_height) != 0)
     {
         pmesg(1, (char*)"error recv remote screen size\n");

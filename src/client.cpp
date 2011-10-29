@@ -1,4 +1,4 @@
-//#include <stdio.h>
+#include <stdio.h>
 #include <unistd.h>
 
 #include <FL/Fl.H>
@@ -60,12 +60,16 @@ static inline int client_sendframe(int yuvsize)
 
     yuvsize_enc = yuvsize;
 
-    sharme_tcp_delay(client_sock);
+    r = sharme_tcp_delay(client_sock);
+    if (r < 0)
+        return r;
     r = sharme_send(client_sock, (unsigned char*)&yuvsize_enc, 4);
     if (r < 0)
         return r;
 
-    sharme_tcp_nodelay(client_sock);
+    r = sharme_tcp_nodelay(client_sock);
+    if (r < 0)
+        return r;
     r = sharme_send(client_sock, outdata, yuvsize);
     if (r < 0)
         return r;
@@ -166,6 +170,17 @@ void* sharme_client2(void *p)
 
     if (g_parent)
         Fl::awake(connected_cb, g_parent);
+
+    /* trivial handshake */
+    char proto_version[8];
+    snprintf(proto_version, 8, "SSP0001");
+    printf("%s\n", proto_version);
+    r = sharme_send(client_sock, (unsigned char*)proto_version, 7);
+    if (r < 0)
+    {
+        pmesg(0, (char*)"error: advertising proto version");
+        goto error;
+    }
 
     ss = screenshot_new();
     screenshot_get_screen_size(ss, 0, &width, &height);
