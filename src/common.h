@@ -13,8 +13,8 @@ void connected_cb(void *p);
 void ready_cb(void *p);
 void connecting_cb(void *p);
 
-void sharme_tcp_delay(socket_t *sock);
-void sharme_tcp_nodelay(socket_t *sock);
+int sharme_tcp_delay(socket_t *sock);
+int sharme_tcp_nodelay(socket_t *sock);
 int sharme_recv(socket_t *sock, unsigned char *buf, int size);
 int sharme_send(socket_t *sock, unsigned char *buf, int size);
 

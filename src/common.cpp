@@ -76,18 +76,18 @@ void connecting_cb(void *p)
 
 /*******/
 /* TCP */
-static inline void tcp_nodelay(socket_t *sock, int on)
+static inline int tcp_nodelay(socket_t *sock, int on)
 {
-    socket_setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &on, sizeof(on));
+    return socket_setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &on, sizeof(on));
 }
-void sharme_tcp_delay(socket_t *sock)
+int sharme_tcp_delay(socket_t *sock)
 {
-    tcp_nodelay(sock, 0);
+    return tcp_nodelay(sock, 0);
 }
 
-void sharme_tcp_nodelay(socket_t *sock)
+int sharme_tcp_nodelay(socket_t *sock)
 {
-    tcp_nodelay(sock, 1);
+    return tcp_nodelay(sock, 1);
 }
 
 int sharme_recv(socket_t *sock, unsigned char *buf, int size)

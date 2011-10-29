@@ -15,6 +15,7 @@ static void *get_in_addr(struct sockaddr *sa)
 
 int socket_close(socket_t *self)
 {
+    if (!self) return -1;
 #ifdef MSWINDOWS
     closesocket(self->fd);
     WSACleanup();
@@ -32,6 +33,7 @@ int socket_del(socket_t *self)
 
 int socket_setsockopt(socket_t *self, int level, int optname, const void *optval, socklen_t optlen)
 {
+    if (!self) return -1;
     return setsockopt(self->fd, level, optname, optval, optlen);
 }
 

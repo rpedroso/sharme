@@ -166,6 +166,11 @@ void viewer_disconnected_cb(void *p)
     window = NULL;
 }
 
+void viewer_free_data_cb(void *p)
+{
+    free(p);
+    p = NULL;
+}
 /* end messages to main thread */
 
 static int viewer_bind(void)
@@ -419,10 +424,11 @@ static void* viewer_receiver(void* parent)
     }
 error:
     Fl::awake(viewer_disconnected_cb, parent);
-    if (out) free(out);
-    if (rgbout) free(rgbout);
-    if (rgbout2) free(rgbout2);
-    free(videodata);
+    if (out) free(out); out = NULL;
+    if (rgbout) free(rgbout); rgbout = NULL;
+    Fl::awake(viewer_free_data_cb, rgbout2);
+    //if (rgbout2) free(rgbout2); rgbout2 = NULL;
+    free(videodata); videodata = NULL;
     viewer_close_sockets();
     pmesg(1, (char*)"exiting viewer thread\n");
 }
