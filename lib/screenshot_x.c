@@ -41,7 +41,7 @@ Context* display_open(const char *display_name)
   xcontext->white = XWhitePixel (xcontext->disp, xcontext->screen_num);
   xcontext->black = XBlackPixel (xcontext->disp, xcontext->screen_num);
   xcontext->depth = DefaultDepthOfScreen (xcontext->screen);
-  //printf("Depth %d\n", xcontext->depth); 
+  printf("Depth %d\n", xcontext->depth); 
   xcontext->width = DisplayWidth (xcontext->disp, xcontext->screen_num);
   xcontext->height = DisplayHeight (xcontext->disp, xcontext->screen_num);
           
@@ -195,6 +195,7 @@ inline void screenshot_get_image(screenshot_t *self) //, int startx, int starty,
     int r = XShmGetImage (priv->context->disp, priv->context->root, priv->image, startx, starty, AllPlanes);
     pmesg(9, "ret %d\n", r);
     self->data = priv->image->data;
+    //printf("bpp %d depth %d\n", priv->image->bits_per_pixel, priv->image->depth);
 
 #else
     //priv->image = XGetImage (priv->context->disp, priv->context->root, startx, starty, width, height, DEPTH32, ZPixmap);
@@ -218,6 +219,12 @@ void screenshot_get_screen_size(screenshot_t *self, int index, int *width, int *
     *height = priv->context->height;
 }
 
+int screenshot_get_depth(screenshot_t *self)
+{
+    pmesg(9, "get_screen_size\n");
+    private_t *priv = (private_t*)self->priv;
+    return priv->context->depth;
+}
 
 void screenshot_free_image(screenshot_t *self)
 {
