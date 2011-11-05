@@ -145,20 +145,6 @@ static void viewer_draw_image_cb(void *p)
     //Fl::unlock();
 }
 
-static void viewer_window_realize_cb(void *p)
-{
-    pmesg(3, (char*)"viewer_window_realize\n");
-    //Fl::lock();
-    draw_image_args_t *di_arg = (draw_image_args_t*) p;
-    window->size((di_arg->width > Fl::w() ? Fl::w() : di_arg->width),
-                 (di_arg->height > Fl::h() ? Fl::h() : di_arg->height));
-
-    window->position((Fl::w() - window->w())/2,
-                     (Fl::h() - window->h())/2);
-    window->show();
-    //Fl::unlock();
-}
-
 void viewer_disconnected_cb(void *p)
 {
     disconnected_cb((SharmeUI*) p);
@@ -284,11 +270,15 @@ static inline int viewer_codec_parse_header(SmokeCodecInfo *info,
 
 static inline void viewer_window_realize(int width, int height)
 {
-    draw_image_args_t di_arg;
-    di_arg.width = width;
-    di_arg.height = height;
-    di_arg.data = NULL;
-    Fl::awake(viewer_window_realize_cb, &di_arg);
+    pmesg(3, (char*)"viewer_window_realize\n");
+    Fl::lock();
+    window->size((width > Fl::w() ? Fl::w() : width),
+                 (height > Fl::h() ? Fl::h() : height));
+
+    window->position((Fl::w() - window->w())/2,
+                     (Fl::h() - window->h())/2);
+    window->show();
+    Fl::unlock();
 }
 
 static inline void viewer_get_size(int *width, int *height)
