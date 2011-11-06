@@ -29,7 +29,7 @@ endif(UNIX)
 #set(LIBS ${LIBS} ${JPEG_LIBRARIES})
 
 add_definitions("-O3")
-add_definitions("-g")
+#add_definitions("-g")
 add_definitions("-ffast-math")
 
 #if(LINUX)

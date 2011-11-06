@@ -20,6 +20,7 @@ SharmeUI *shui;
 static char *cmd_server = NULL;
 static int cmd_quality = 40;
 static char *cmd_keycode = NULL;
+static bool cmd_show = false;
 
 static int helpFlag = 0;
 
@@ -115,6 +116,11 @@ static int arg(int argc, char **argv, int &i)
             return 2;
         }
     }
+    if (strcmp("-sh", argv[i]) == 0 || strcmp("-show", argv[i]) == 0) {
+            cmd_show = true;
+            i += 1;
+            return 1;
+    }
     return 0;
 }
 
@@ -129,6 +135,7 @@ int main(int argc, char *argv[])
         " -se[rver] <ip> : share desktop with <ip>\n"
         " -q[uality] <ip> : image quality\n"
         " -key[code] <key> : key code\n"
+        " -sh[ow] : show sharme window at shared desktop side\n"
         " FLTK options\n"
         "%s\n",
         argv[i], argv[0], Fl::help);
@@ -139,13 +146,15 @@ int main(int argc, char *argv[])
         " -se[rver] <ip> : share desktop with <ip>\n"
         " -q[uality] <ip> : image quality\n"
         " -key[code] <key> : key code\n"
+        " -sh[ow] : show sharme window at shared desktop side\n"
         " FLTK options:\n"
         "%s\n",
         argv[0], Fl::help);
 
-    shui = new SharmeUI;
+    Fl::lock();
+    shui = new SharmeUI();
 
-    Fl::visual(FL_DOUBLE | FL_RGB);
+    Fl::visual(FL_RGB);
 
     shui->lb_header->label(SHARME_LABEL_HEADER);
 
@@ -169,10 +178,19 @@ int main(int argc, char *argv[])
         shui->te_server->value(cmd_server);
         shui->te_keycode->value(cmd_keycode);
 
+        if (cmd_show)
+        {
+            shui->bt_start->callback(start_cb);
+            shui->bt_exit->callback(exit_cb);
+            shui->rb_manage->callback(mode_cb);
+            shui->rb_share->callback(mode_cb);
+            shui->sharme_window->callback(exit_cb);
+            shui->show(argc, argv);
+        }
+
         start_cb(NULL, NULL);
     }
 
-    Fl::lock();
     return Fl::run();
 }
 

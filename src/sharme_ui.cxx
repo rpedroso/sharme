@@ -114,7 +114,9 @@ void SharmeUI::connected() {
 this->status_led->redraw();
 this->status_label->label("connected");
 this->gr_mode->deactivate();
-this->gr_props->deactivate();
+//this->gr_props->deactivate();
+this->gr_props->activate();
+this->te_server->deactivate();
 this->bt_start->deactivate();
 this->bt_exit->activate();
 this->bt_exit->label("&stop");

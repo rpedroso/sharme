@@ -4,7 +4,7 @@ header_name {.h}
 code_name {.cxx}
 decl {\#include "enums.h"} {} 
 
-class SharmeUI {open
+class SharmeUI {open selected
 } {
   decl {int state;} {public
   }
@@ -15,7 +15,7 @@ class SharmeUI {open
       xywh {551 173 445 250} type Double visible
     } {
       Fl_Box lb_header {
-        label {sharme session 0.0} selected
+        label {sharme session 0.0}
         xywh {7 8 428 29} box THIN_UP_FRAME labeltype SHADOW_LABEL labelfont 1 labelsize 20
       }
       Fl_Group {} {
@@ -43,7 +43,7 @@ class SharmeUI {open
           xywh {15 120 200 25} type Radio down_box THIN_DOWN_BOX labeltype ENGRAVED_LABEL
         }
       }
-      Fl_Group gr_props {
+      Fl_Group gr_props {open
         xywh {225 63 213 100}
       } {
         Fl_Input te_server {
@@ -105,7 +105,9 @@ this->state = SHARME_STOPPED;} {}
 this->status_led->redraw();
 this->status_label->label("connected");
 this->gr_mode->deactivate();
-this->gr_props->deactivate();
+//this->gr_props->deactivate();
+this->gr_props->activate();
+this->te_server->deactivate();
 this->bt_start->deactivate();
 this->bt_exit->activate();
 this->bt_exit->label("&stop");

@@ -27,7 +27,7 @@ static screenshot_t *ss = NULL;
 static SmokeCodecInfo *info = NULL;
 static unsigned char* raw_image = NULL;
 static unsigned char* yuv420p = NULL;
-static unsigned char* outdata = NULL;
+//static unsigned char* outdata = NULL;
 
 static int make_div_by_16(int val)
 {
@@ -70,7 +70,7 @@ static inline int client_sendframe(int yuvsize)
     r = sharme_tcp_nodelay(client_sock);
     if (r < 0)
         return r;
-    r = sharme_send(client_sock, outdata, yuvsize);
+    r = sharme_send(client_sock, ss->data, yuvsize);
     if (r < 0)
         return r;
 
@@ -86,8 +86,10 @@ static void *sharme_recv_input(void *arg)
     int key;
     int x, y;
     mouse_init();
+    int cnt = 0;
     while(true)
     {
+        cnt++;
         r = sharme_recv(client_sock, (unsigned char*)&action, 1);
         if (r < 0) break;
 
@@ -112,9 +114,12 @@ static void *sharme_recv_input(void *arg)
         case 'c':
             r = sharme_recv(client_sock, (unsigned char*)&pos, 4);
             if (r < 0) break;
-            x = pos>>16;
-            y = (pos<<16)>>16;
-            mouse_move(x, y);
+            if (cnt == 2)
+            {
+                x = pos>>16;
+                y = (pos<<16)>>16;
+                mouse_move(x, y);
+            }
             break;
         case 'W':
             mouse_wheel(4);
@@ -131,6 +136,11 @@ static void *sharme_recv_input(void *arg)
             process_key(action, key);
             break;
         }
+        if (cnt == 2)
+        {
+            Fl::awake();
+            cnt=0;
+        }
     }
     pmesg(0, (char*)"client: cleanup keys\n");
     cleanup_keys();
@@ -144,11 +154,11 @@ void* sharme_client2(void *p)
     int new_w;
     int new_h;
 
-    Fl::lock();
+    //Fl::lock();
     int min_quality = g_parent->sl_quality->value(); //30;
     int max_quality = g_parent->sl_quality->value(); //90;
-    Fl::unlock();
-    int threshold   = 300;
+    //Fl::unlock();
+    int threshold   = 1;
 
     char *server = (char *) p;
 
@@ -169,7 +179,8 @@ void* sharme_client2(void *p)
     }
 
     if (g_parent)
-        Fl::awake(connected_cb, g_parent);
+        //Fl::awake(connected_cb, g_parent);
+        connected_cb(g_parent);
 
     /* trivial handshake */
     char proto_version[8];
@@ -205,7 +216,7 @@ void* sharme_client2(void *p)
     yuvsize_sav = yuvsize;
 
     yuv420p = (unsigned char*) calloc(sizeof(unsigned char), yuvsize);
-    outdata = (unsigned char*) calloc(sizeof(unsigned char), yuvsize);
+    //outdata = (unsigned char*) calloc(sizeof(unsigned char), yuvsize);
     if (new_w != width || new_h != height)
     {
         pmesg(1, (char*)"resample to: (%dx%d)\n", new_w, new_h);
@@ -221,35 +232,45 @@ void* sharme_client2(void *p)
 
     while(true)
     {
-        //Fl::lock();
-        //int min_quality = g_parent->sl_quality->value(); //30;
-        //int max_quality = g_parent->sl_quality->value(); //90;
-        //Fl::unlock();
-        //smokecodec_set_quality (info, min_quality, max_quality);
-
         yuvsize = yuvsize_sav;
 
         client_screenshot(width, height, new_w, new_h);
-        smokecodec_encode(info, yuv420p, SMOKECODEC_MOTION_VECTORS, outdata, &yuvsize);
-        if ((r=client_sendframe(yuvsize)) < 0)
+        smokecodec_encode(info, yuv420p, SMOKECODEC_MOTION_VECTORS, ss->data, &yuvsize);
+        if (yuvsize > 18)
         {
-            pmesg(1, (char*)"error: sendframe (errno: %d\n", r);
-            break;
+            if ((r=client_sendframe(yuvsize)) < 0)
+            {
+                pmesg(1, (char*)"error: sendframe (errno: %d\n", r);
+                break;
+            }
         }
 
-        if (fast)
+        //if (fast)
+        //    usleep(100000);
+        //else
+        //    usleep(200000);
+        //Fl::check();
+        //usleep(150000);
+        if (Fl::wait(.50) == 1)
+        {
             usleep(100000);
-        else
-            usleep(200000);
+            //Fl::lock();
+            int min_quality = g_parent->sl_quality->value(); //30;
+            int max_quality = g_parent->sl_quality->value(); //90;
+            //Fl::unlock();
+            smokecodec_set_quality (info, min_quality, max_quality);
+        }
+
     }
 
 error:
     if (g_parent)
-        Fl::awake(disconnected_cb, g_parent);
+        //Fl::awake(disconnected_cb, g_parent);
+        disconnected_cb(g_parent);
 
     if (ss) screenshot_dealloc(ss);
     if (yuv420p) free(yuv420p);
-    if (outdata) free(outdata);
+    //if (outdata) free(outdata);
     if (raw_image) free(raw_image);
 
     socket_close(client_sock);
@@ -268,7 +289,7 @@ void sharme_client_stop(void)
 
 int sharme_client_start(void *parent, char *server)
 {
-    Fl_Thread sharme_client_thread;
+    //Fl_Thread sharme_client_thread;
 
     g_parent = (SharmeUI*) parent;
     connecting_cb(g_parent);
@@ -276,6 +297,7 @@ int sharme_client_start(void *parent, char *server)
     if (!g_parent->sharme_window->shown())
         sharme_client2((void*)strdup(server));
     else
-        fl_create_thread(sharme_client_thread,
-                         sharme_client2, (void*)strdup(server));
+        sharme_client2((void*)strdup(server));
+        //fl_create_thread(sharme_client_thread,
+        //                 sharme_client2, (void*)strdup(server));
 }
