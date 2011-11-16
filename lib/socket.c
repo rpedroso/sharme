@@ -104,6 +104,21 @@ socket_t* socket_accept(socket_t *self, struct sockaddr *addr, socklen_t *addrle
     new_self->fd = new_fd;
 
 /*
+    printf("listener: got packet from %s\n",
+            inet_ntop(((struct sockaddr_storage*)addr)->ss_family,
+            get_in_addr((struct sockaddr *)addr),
+            s, sizeof s));
+
+    char host[1024];
+    char service[20];
+    getnameinfo(addr, sizeof(struct sockaddr),
+                host, sizeof(host),
+                service, sizeof(service), 0);
+    printf("host: %s\n", host);
+    // e.g. "www.example.com"
+    printf("service: %s\n", service); // e.g. "http"
+*/
+/*
     inet_ntoa(((struct sockaddr_storage*)addr)->ss_family,
               get_in_addr(addr),
               s, sizeof s);

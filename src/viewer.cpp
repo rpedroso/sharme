@@ -28,8 +28,39 @@ static int g_height = 0;
 class Viewer;
 static Viewer *window = NULL;
 
+#define MAX_WW 2048
+#define MAX_HH 1600
+
 class Viewer : public Fl_Double_Window
 {
+    unsigned char *img_data;
+    int img_w;
+    int img_h;
+    unsigned char rgbout2[MAX_WW*MAX_HH*3];
+
+    void draw()
+    {
+        pmesg(3, (char*)"Viewer::draw\n");
+        //fl_push_clip(0,0,w(),h());
+        if (!img_data) return;
+        fl_push_no_clip();
+        if (img_w != w() || img_h != h())
+        {
+            resample((unsigned char*)img_data, img_w, img_h, 3, rgbout2, w(), h());
+            fl_draw_image((const unsigned char*)rgbout2, 0,0, w(), h(), 3, 0);
+        }
+        else
+            fl_draw_image((const unsigned char*)img_data, 0,0, img_w, img_h, 3, 0);
+        fl_pop_clip();
+    }
+
+    void resize(int XX,int YY,int WW,int HH) {
+        if (WW <= MAX_WW && HH <= MAX_HH)
+            Fl_Double_Window::resize(XX,YY,WW,HH);
+        //else
+        //    Fl_Double_Window::resize(XX,YY,MAX_WW,MAX_HH);
+    }
+
     int handle(int e)
     {
         static int cnt = 0;
@@ -117,11 +148,22 @@ class Viewer : public Fl_Double_Window
             sharme_tcp_nodelay(conn);
             sharme_send(conn, (unsigned char*)&key, 4);
             break;
+        case FL_SHOW:
+            set_image(NULL, 0, 0);
+            break;
         }
         return 1;
     }
+
 public:
     Viewer(int w,int h) : Fl_Double_Window(w,h) {}
+
+    void set_image(const unsigned char*img_data, int W, int H)
+    {
+        this->img_w = W;
+        this->img_h = H;
+        this->img_data = (unsigned char*)img_data;
+    }
 };
 
 /* messages to main thread */
@@ -134,15 +176,11 @@ typedef struct draw_image_args
 
 static void viewer_draw_image_cb(void *p)
 {
-    pmesg(3, (char*)"viewer_draw_image\n");
+    pmesg(3, (char*)"viewer_draw_image_cb\n");
     draw_image_args_t *di_arg = (draw_image_args_t*) p;
-    //Fl::lock();
-    window->make_current();
-    //fl_push_no_clip();
-    fl_draw_image((const unsigned char*)di_arg->data, 0,0,
-                  di_arg->width, di_arg->height, 3, 0);
-    //fl_pop_clip();
-    //Fl::unlock();
+    window->set_image((const unsigned char*)di_arg->data,
+                  di_arg->width, di_arg->height);
+    window->redraw();
 }
 
 void viewer_disconnected_cb(void *p)
@@ -152,11 +190,6 @@ void viewer_disconnected_cb(void *p)
     window = NULL;
 }
 
-void viewer_free_data_cb(void *p)
-{
-    free(p);
-    p = NULL;
-}
 /* end messages to main thread */
 
 static int viewer_bind(void)
@@ -198,14 +231,25 @@ static int viewer_recv_protocol_version(void)
 {
     int r;
     char proto_version[8];
+    char valid_proto_version[] = "SSP0001";
+    int proto_version_length = strlen(valid_proto_version);
+    char response[] = "Hi,there";
+
     pmesg(3, (char*)"viewer_recv_protocol_version\n");
-    r = sharme_recv(conn, (unsigned char*)proto_version, 7);
+    r = sharme_recv(conn, (unsigned char*)proto_version,
+                    proto_version_length);
     if (r < 0)
     {
         return -1;
     }
     proto_version[7] = '\0';
-    if (strncmp(proto_version, "SSP0001", 7) != 0)
+    if (strncmp(proto_version, valid_proto_version,
+                proto_version_length) != 0)
+    {
+        return -2;
+    }
+    r = sharme_send(conn, (unsigned char*)response, strlen(response));
+    if (r < 0)
     {
         return -2;
     }
@@ -226,21 +270,15 @@ static int viewer_recv_remote_screen_size(int *width, int *height)
     return 0;
 }
 
-static inline int viewer_recv_frame_size(int *frame_size)
-{
-    int r;
-    pmesg(3, (char*)"viewer_recv_frame_size\n");
-    r = sharme_recv(conn, (unsigned char*)frame_size, 4);
-    if (r < 0)
-        return -1;
-    return 0;
-}
-
-static inline int viewer_recv_frame(unsigned char *videodata, int frame_size)
+static inline int viewer_recv_frame(unsigned char *videodata, unsigned int *frame_size)
 {
     int r;
     pmesg(3, (char*)"viewer_recv_frame\n");
-    r = sharme_recv(conn, (unsigned char*)videodata, frame_size);
+    r = sharme_recv(conn, (unsigned char*)frame_size, 4);
+    if (r < 0)
+        return -1;
+
+    r = sharme_recv(conn, (unsigned char*)videodata, *frame_size);
     if (r < 0)
         return -1;
     return 0;
@@ -277,6 +315,7 @@ static inline void viewer_window_realize(int width, int height)
 
     window->position((Fl::w() - window->w())/2,
                      (Fl::h() - window->h())/2);
+    window->label("sharme viewer");
     window->show();
     Fl::unlock();
 }
@@ -312,22 +351,17 @@ static void* viewer_receiver(void* parent)
     int r;
     bool first_time = true;
     SmokeCodecInfo *info;
-    int frame_size;
-    unsigned char *videodata;
+    unsigned int frame_size;
+    unsigned char *videodata = 0;
 
-    unsigned char *out     = 0;
-    unsigned char *rgbout  = 0;
-    unsigned char *rgbout2 = 0;
+    unsigned char *yuvvideodata = 0;
+    unsigned char *rgbvideodata = 0;
 
     unsigned int frame_width;
     unsigned int frame_height;
 
-    int viewer_width;
-    int viewer_height;
-
-    unsigned int last_viewer_width = 0;
-    unsigned int last_viewer_height = 0;
-    unsigned long outsize = 0;
+    unsigned int last_frame_width = 0;
+    unsigned int last_frame_height = 0;
 
     pmesg(3, (char*)"viewer_receiver\n");
 
@@ -348,7 +382,7 @@ static void* viewer_receiver(void* parent)
     pmesg(1, (char*)"start...\n");
     Fl::awake(connected_cb, parent);
 
-    if ((r=viewer_recv_protocol_version()) < 0)
+    if ((r = viewer_recv_protocol_version()) < 0)
     {
         if (r == -2)
             pmesg(1, (char*)"incorrect protocol advertisement\n");
@@ -363,6 +397,8 @@ static void* viewer_receiver(void* parent)
     }
     pmesg(1, (char*)"remote screen size (%d:%d)\n", g_width, g_height);
 
+    viewer_window_realize(g_width, g_height);
+
     smokecodec_decode_new(&info);
 
     videodata = (unsigned char*) malloc(sizeof(unsigned char)
@@ -376,75 +412,53 @@ static void* viewer_receiver(void* parent)
     while(true)
     {
 
-        if (viewer_recv_frame_size(&frame_size) != 0)
-        {
-            pmesg(1, (char*)"error recv frame size\n");
-            break;
-        }
-
-        if (viewer_recv_frame(videodata, frame_size) != 0)
+        if (viewer_recv_frame(videodata, &frame_size) != 0)
         {
             pmesg(1, (char*)"error recv frame\n");
             break;
         }
 
-        //pmesg(1, (char*)"codec parse header\n");
         r = viewer_codec_parse_header(info, videodata, frame_size,
                                   &frame_width, &frame_height);
-        //pmesg(1, (char*)"codec parse header (%d)\n", r);
 
-        if (first_time) {
-            first_time = false;
-            viewer_window_realize(frame_width, frame_height);
-        }
-
-        viewer_get_size(&viewer_width, &viewer_height);
-
-        if ((last_viewer_width != viewer_width)
-             || (last_viewer_height != viewer_height))
+        if ((last_frame_width != frame_width)
+             || (last_frame_height != frame_height))
         {
-            if (out) free(out);
-            if (rgbout) free(rgbout);
-            if (rgbout2) free(rgbout2);
-
+            unsigned long outsize = 0;
             outsize = frame_width * frame_height
                       + frame_width * frame_height / 2;
 
-            out = (unsigned char*) malloc(sizeof(unsigned char) * outsize);
-            rgbout = (unsigned char*) malloc(sizeof(unsigned char)
+            yuvvideodata = (unsigned char*) realloc(yuvvideodata,
+                           sizeof(char) * outsize);
+            if (!yuvvideodata)
+            {
+                pmesg(1, (char*)"error out of memory\n");
+                break;
+            }
+
+            rgbvideodata = (unsigned char*) realloc(rgbvideodata, sizeof(char)
                                            * frame_width * frame_height * 3);
-            rgbout2 = (unsigned char*) malloc(sizeof(unsigned char)
-                                           * viewer_width * viewer_height * 3);
+            if (!rgbvideodata)
+            {
+                pmesg(1, (char*)"error out of memory\n");
+                break;
+            }
         }
 
-        //pmesg(1, (char*)"codec decode\n");
-        smokecodec_decode(info,
-                          (const unsigned char*) videodata,
-                          frame_size, out);
+        smokecodec_decode(info, (const unsigned char*) videodata,
+                          frame_size, yuvvideodata);
 
-        if (frame_width == viewer_width && frame_height == viewer_height)
-        {
-            yuv420p2rgb(out, rgbout2, frame_width, frame_height, 3);
-        }
-        else
-        {
-            yuv420p2rgb(out, rgbout, frame_width, frame_height, 3);
-            resample(rgbout, frame_width, frame_height, 3,
-                     rgbout2, viewer_width, viewer_height);
-        }
+        yuv420p2rgb(yuvvideodata, rgbvideodata, frame_width, frame_height, 3);
+        viewer_draw_image(rgbvideodata, frame_width, frame_height);
 
-        viewer_draw_image(rgbout2, viewer_width, viewer_height);
-
-        last_viewer_width = viewer_width;
-        last_viewer_height = viewer_height;
+        last_frame_width = frame_width;
+        last_frame_height = frame_height;
     }
 error:
     Fl::awake(viewer_disconnected_cb, parent);
-    if (out) free(out); out = NULL;
-    if (rgbout) free(rgbout); rgbout = NULL;
-    Fl::awake(viewer_free_data_cb, rgbout2);
-    //if (rgbout2) free(rgbout2); rgbout2 = NULL;
-    free(videodata); videodata = NULL;
+    if (yuvvideodata) free(yuvvideodata); yuvvideodata = NULL;
+    if (rgbvideodata) free(rgbvideodata); rgbvideodata = NULL;
+    if (videodata) free(videodata); videodata = NULL;
     viewer_close_sockets();
     pmesg(1, (char*)"exiting viewer thread\n");
 }
@@ -485,6 +499,8 @@ int sharme_viewer_start(void *parent)
 {
     pmesg(3, (char*)"sharme_viewer_start\n");
     window = viewer_create_window();
+
+    Fl::check();
 
     Fl_Thread sharme_viewer_thread;
     fl_create_thread(sharme_viewer_thread, viewer_receiver, (void*)parent);

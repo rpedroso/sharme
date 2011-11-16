@@ -22,6 +22,9 @@ endif(WINDOWS)
 
 if(UNIX)
     add_definitions("-D__XLIB__")
+    #add_definitions("-I/home/rpedroso/Downloads/fltk-1.3.0")
+    #add_definitions("-D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -D_THREAD_SAFE -D_REENTRANT")
+    #add_definitions("-lXext -lpthread -ldl -lm -lX11")
 endif(UNIX)
 
 #find_package(JPEG REQUIRED)
@@ -29,13 +32,9 @@ endif(UNIX)
 #set(LIBS ${LIBS} ${JPEG_LIBRARIES})
 
 add_definitions("-O3")
-#add_definitions("-g")
+add_definitions("-g")
 add_definitions("-ffast-math")
 
-#if(LINUX)
-#    find_package (Threads REQUIRED)
-#endif(LINUX)
- 
 # add the binary tree to the search path for include files
 include_directories("${PROJECT_BINARY_DIR}/src")
 include_directories ("${PROJECT_SOURCE_DIR}/lib")

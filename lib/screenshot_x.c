@@ -21,6 +21,7 @@ ximage_free (XImage* ximage)
   ximage->width = -1;
   ximage->height = -1;
   free(ximage);
+  ximage = NULL;
 }
 
 Context* display_open(const char *display_name)
@@ -31,7 +32,7 @@ Context* display_open(const char *display_name)
   xcontext->disp = XOpenDisplay(display_name);
   //printf("opened display %p\n", xcontext->disp);
   if (!xcontext->disp) {
-    free (xcontext);
+    free (xcontext); xcontext = NULL;
     return NULL;
   } 
   xcontext->screen = DefaultScreenOfDisplay (xcontext->disp);
@@ -229,6 +230,7 @@ int screenshot_get_depth(screenshot_t *self)
 void screenshot_free_image(screenshot_t *self)
 {
     pmesg(9, "screenshot_free_image\n");
+    if (!self) return;
     private_t *priv = (private_t*)self->priv;
     if (priv->image)
         XDestroyImage(priv->image);
@@ -243,8 +245,10 @@ void screenshot_dealloc(screenshot_t *self)
     {
         screenshot_free_image(self);
         free(self->priv);
+        self->priv = NULL;
     }
     free(self);
+    self = NULL;
 }
 
 screenshot_t* screenshot_new()
