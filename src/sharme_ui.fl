@@ -4,7 +4,7 @@ header_name {.h}
 code_name {.cxx}
 decl {\#include "enums.h"} {} 
 
-class SharmeUI {open selected
+class SharmeUI {open
 } {
   decl {int state;} {public
   }
@@ -92,12 +92,14 @@ if (this->rb_manage->value())
 else
 {
     this->gr_props->activate();
+    this->te_server->activate();
 }
 this->bt_start->activate();
 this->bt_exit->label("e&xit");
 this->bt_exit->activate();
 this->te_keycode->activate();
-this->state = SHARME_STOPPED;} {}
+this->state = SHARME_STOPPED;} {selected
+    }
   }
   Function {connected()} {open
   } {

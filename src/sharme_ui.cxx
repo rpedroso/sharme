@@ -101,6 +101,7 @@ if (this->rb_manage->value())
 else
 {
     this->gr_props->activate();
+    this->te_server->activate();
 }
 this->bt_start->activate();
 this->bt_exit->label("e&xit");

@@ -70,6 +70,7 @@ void mode_cb(Fl_Widget *,void *)
     if (shui->rb_share->value())
     {
         shui->gr_props->activate();
+        shui->te_server->activate();
     }
     else
     {
