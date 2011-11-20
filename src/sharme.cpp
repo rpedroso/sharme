@@ -194,7 +194,7 @@ int main(int argc, char *argv[])
     }
     else
     { /* Unanttend start */
-        pmesg(0, (char*)"Unanttended client start\n");
+        pmesg(3, (char*)"Unanttended client start\n");
         shui->rb_manage->value(0);
         shui->rb_share->value(1);
         shui->sl_quality->value(cmd_quality);
@@ -203,16 +203,17 @@ int main(int argc, char *argv[])
 
         if (cmd_show)
         {
-            pmesg(0, (char*)"Unanttended client start show\n");
+            pmesg(3, (char*)"Unanttended client start show\n");
             shui->bt_start->callback(start_cb);
             shui->bt_exit->callback(exit_cb);
             shui->rb_manage->callback(mode_cb);
             shui->rb_share->callback(mode_cb);
             shui->sharme_window->callback(exit_cb);
             shui->show(argc, argv);
+            Fl::awake(start_unattended, NULL);
         }
-
-        Fl::awake(start_unattended, NULL);
+        else
+            start_unattended(NULL);
     }
 
     pmesg(0, (char*)"run\n");
