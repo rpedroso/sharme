@@ -3,7 +3,7 @@ project (sharme)
 
 # The version number.
 set (sharme_VERSION_MAJOR 0)
-set (sharme_VERSION_MINOR 2)
+set (sharme_VERSION_MINOR 3)
 set (sharme_LABEL_HEADER "\"sharme session ${sharme_VERSION_MAJOR}.${sharme_VERSION_MINOR}\"")
  
 set (sharme_PORT "\"8000\"")
@@ -32,7 +32,7 @@ endif(UNIX)
 #set(LIBS ${LIBS} ${JPEG_LIBRARIES})
 
 add_definitions("-O3")
-add_definitions("-g")
+#add_definitions("-g")
 add_definitions("-ffast-math")
 
 # add the binary tree to the search path for include files
