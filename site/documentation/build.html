@@ -2,10 +2,11 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>sharme - developer</title>
+    <title>sharme - build</title>
     <meta name="description" content="remote desktop" />
     <meta name="keywords" content="sharme,remote,share,desktop" />
     <meta name="google-site-verification" content="Wfnyfnx-Lwt4ygFLsk7_L-FTDiVQIfBhmqO8QnilLL4" />
+    <link href='http://fonts.googleapis.com/css?family=Coda' rel='stylesheet' type='text/css'>
     <link rel="stylesheet" type="text/css" href="/sharme/poole.css" />
     <script type="text/javascript">
       var _gaq = _gaq || [];
@@ -22,7 +23,7 @@
     <div id="box">
     <!--div id="header">
          <h1>a poole site</h1>
-         <h2>developer</h2>
+         <h2>build</h2>
     </div-->
     <div id="menu">
     <span class=""><a href="/sharme/index.html">about</a></span>
@@ -33,43 +34,54 @@
     </div>
     <div id="submenu">
 <span class=""><a href="/sharme/documentation/user.html">user</a></span>
-<span class="current"><a href="/sharme/documentation/developer.html">developer</a></span>
-<span class=""><a href="/sharme/documentation/build.html">build</a></span>
+<span class=""><a href="/sharme/documentation/developer.html">developer</a></span>
+<span class="current"><a href="/sharme/documentation/build.html">build</a></span>
 </div>
     <div id="content">
-    <h1>sharme - developer</h1>
-    <p>sharme in its current form has a simple codebase.</p>
-<h2>The way it works is:</h2>
-<ol>
-<li>Take a desktop screenshot in rgba</li>
-<li>If the screen size is not multiple of 16
-   (any or both width, height) do a resize
-   to make it multiple of 16</li>
-<li>convert the screenshot image data from
-   rgb to yuv420p and at the same time strip
-   the alpha channel.</li>
-<li>Feed the video codec. The codec used is
-   the smoke codec from Gstreamer. Gstreamer is
-   not needed, I just shameless stole it from
-   Gstreamer.</li>
-<li>Then just send the encoded data to the network.
-   Before sent it an encryption is done with arc4</li>
-</ol>
-<h2>The way it is organized:</h2>
-<p>lib/* - where several routines are implemented.
-        Generally a specific task is in its own .c
-        file, for example conversion from rgb to yuv
-        and vice versa are in the colorspace.c
-include/* - the headers of the lib/*</p>
-<p>src/viewer.cpp - the code that runs in the supporter
-                 machine</p>
-<p>src/client.cpp - the code that runs in the machine
-                 that it's sharing its screen.</p>
-<p>src/sharme.cpp - the main where all starts running.</p>
-<hr />
-<blockquote>
-<p>Source code is hosted on github <a href="https://github.com/rpedroso/sharme">https://github.com/rpedroso/sharme</a> so go fork it.</p>
-</blockquote>
+    <h1>sharme - build</h1>
+    <h2>Dependencies</h2>
+<ul>
+<li>FLTK</li>
+<li>jpeglib</li>
+<li>cmake</li>
+<li>X11 (linux)</li>
+<li>XTest (linux)</li>
+</ul>
+<h2>Build it</h2>
+<p>Assuming all builds from a linux 64 bit host.</p>
+<h2>Build linux 32 bit binary:</h2>
+<pre><code>$ cd &lt;to_source_dir&gt;
+$ mkdir bld_lin32
+$ cd bld_lin32
+$ export CFLAGS=-m32 CXXFLAGS=-m32
+$ cmake ..
+$ make
+</code></pre>
+<h2>Build linux 64 bit binary:</h2>
+<pre><code>$ cd &lt;to_source_dir&gt;
+$ mkdir bld_lin64
+$ cd bld_lin64
+$ # if you have set CFLAGS and CXXFLAGS above, for 32 bit unset them first
+$ unset CFLAGS CXXFLAGS
+$ cmake ..
+$ make
+</code></pre>
+<h2>Build windows 32 bit binary</h2>
+<p>Install mingw32 and the require dependencies for sharme
+I recommend <a href="http://mingw-cross-env.nongnu.org/">MinGW cross compiling environment</a></p>
+<pre><code>$ cd &lt;to_source_dir&gt;
+$ # edit cmake/toolchain-mingw32.cmake to match your mingw environment, pay attention to
+$ # CMAKE_C_COMPILER, CMAKE_CXX_COMPILER and CMAKE_FIND_ROOT_PATH vars.
+$ mkdir bld_win32
+$ cd bld_win32
+$ cmake -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchain-mingw32.cmake ..
+$ make
+</code></pre>
+<h2>Optional</h2>
+<p>You can strip and compress the binary:</p>
+<pre><code>$ strip sharme(.exe)
+$ upx -9 sharme(.exe)
+</code></pre>
     </div>
     </div>
     <div id="footer">

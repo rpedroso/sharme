@@ -2,10 +2,11 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>sharme - documentation</title>
+    <title>sharme - developer</title>
     <meta name="description" content="remote desktop" />
     <meta name="keywords" content="sharme,remote,share,desktop" />
     <meta name="google-site-verification" content="Wfnyfnx-Lwt4ygFLsk7_L-FTDiVQIfBhmqO8QnilLL4" />
+    <link href='http://fonts.googleapis.com/css?family=Coda' rel='stylesheet' type='text/css'>
     <link rel="stylesheet" type="text/css" href="/sharme/poole.css" />
     <script type="text/javascript">
       var _gaq = _gaq || [];
@@ -22,31 +23,53 @@
     <div id="box">
     <!--div id="header">
          <h1>a poole site</h1>
-         <h2>documentation</h2>
+         <h2>developer</h2>
     </div-->
     <div id="menu">
     <span class=""><a href="/sharme/index.html">about</a></span>
 <span class=""><a href="/sharme/status.html">status</a></span>
-<span class="current"><a href="/sharme/documentation/index.html">documentation</a></span>
+<span class=""><a href="/sharme/documentation/index.html">documentation</a></span>
 <span class=""><a href="/sharme/download.html">download</a></span>
 <span class=""><a href="/sharme/mailing.html">mailing list</a></span>
     </div>
     <div id="submenu">
 <span class=""><a href="/sharme/documentation/user.html">user</a></span>
-<span class=""><a href="/sharme/documentation/developer.html">developer</a></span>
+<span class="current"><a href="/sharme/documentation/developer.html">developer</a></span>
 <span class=""><a href="/sharme/documentation/build.html">build</a></span>
 </div>
     <div id="content">
-    <h1>sharme - documentation</h1>
-    <ul>
-<li><a href="/sharme/documentation/user.html">user documentation</a> - how to use it</li>
-<li><a href="/sharme/documentation/developer.html">developer documentation</a> - if you want to hack on it</li>
-<li><a href="/sharme/documentation/build.html">build</a> - if you want to build it from sources</li>
-</ul>
+    <h1>sharme - developer</h1>
+    <p>sharme in its current form has a simple codebase.</p>
+<h2>The way it works is:</h2>
+<ol>
+<li>Take a desktop screenshot in rgba</li>
+<li>If the screen size is not multiple of 16
+   (any or both width, height) do a resize
+   to make it multiple of 16</li>
+<li>convert the screenshot image data from
+   rgb to yuv420p and at the same time strip
+   the alpha channel.</li>
+<li>Feed the video codec. The codec used is
+   the smoke codec from Gstreamer. Gstreamer is
+   not needed, I just shameless stole it from
+   Gstreamer.</li>
+<li>Then just send the encoded data to the network.
+   Before sent it an encryption is done with arc4</li>
+</ol>
+<h2>The way it is organized:</h2>
+<p>lib/* - where several routines are implemented.
+        Generally a specific task is in its own .c
+        file, for example conversion from rgb to yuv
+        and vice versa are in the colorspace.c
+include/* - the headers of the lib/*</p>
+<p>src/viewer.cpp - the code that runs in the supporter
+                 machine</p>
+<p>src/client.cpp - the code that runs in the machine
+                 that it's sharing its screen.</p>
+<p>src/sharme.cpp - the main where all starts running.</p>
 <hr />
 <blockquote>
-<p>if you come to this page directly, see a litte intro in the
-<a href="/sharme/index.html">about</a> page.</p>
+<p>Source code is hosted on github <a href="https://github.com/rpedroso/sharme">https://github.com/rpedroso/sharme</a> so go fork it.</p>
 </blockquote>
     </div>
     </div>

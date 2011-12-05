@@ -1,7 +1,7 @@
 menu-position: 4
 ---
 
-Current version 0.2 (released: Wed 26 Oct 2011):
+Current version 0.3 (released: Mon 05 Dec 2011):
 
 * [windows binary](/sharme/download/sharme.exe)
 ({%
